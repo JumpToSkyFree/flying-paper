@@ -2,8 +2,10 @@
 #define FLYING_PAPER_TELEGRAM_MANAGER_HPP
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
+#include <td/telegram/td_api.h>
 
 namespace FlyingPaper {
 namespace Telegram {
@@ -23,10 +25,14 @@ private:
 
   explicit ClientManager(const ClientManagerAuthorizationParams &params);
   ClientManager();
-  ClientManagerAuthorizationParams params;
   friend class ClientManagerAccessor;
 
 public:
+  using Request = td::tl_object_ptr<td::td_api::Function>;
+  using SharedObject = std::shared_ptr<td::td_api::Object>;
+  using Callback = std::function<void(const SharedObject &)>;
+  using Subscription = std::unordered_map<std::uint64_t, Callback>::iterator;
+
   static std::unique_ptr<ClientManager>
   create(const ClientManagerAuthorizationParams &params);
 
@@ -34,14 +40,21 @@ public:
   ClientManager &operator=(const ClientManager &) = delete;
   ClientManager(ClientManager &&) noexcept;
   ClientManager &operator=(ClientManager &&) noexcept;
-  ~ClientManager();
+  ~ClientManager() = default;
 
-  void set_params(ClientManagerAuthorizationParams &params);
+  void set_params(const ClientManagerAuthorizationParams &params);
   ClientManagerAuthorizationParams get_params() const;
 
   bool is_running() const;
   void start_loop();
   void stop_loop();
+  void authorize();
+  void on_authorization_error(Callback callback);
+  void on_authentication(std::function<void(std::int32_t)> callback);
+
+  template <typename T> static const T &cast(const SharedObject &obj) {
+    return static_cast<const T &>(*obj);
+  }
 };
 } // namespace Telegram
 } // namespace FlyingPaper

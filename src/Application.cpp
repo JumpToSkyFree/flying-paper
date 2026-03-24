@@ -21,7 +21,7 @@ void Application::Class::init() { override_vfunc_activate<Application>(); }
 void Application::vfunc_activate() {
   parent_vfunc_activate<Application>();
 
-  // TODO: Create the main applicaiton window.
+  // TODO: Create the main application window.
   auto *window = ApplicationWindow::ApplicationWindow::create(this);
   window->present();
 }

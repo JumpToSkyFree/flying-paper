@@ -4,9 +4,11 @@
 #include "Telegram/ClientManager.hpp"
 #include "peel/Adw/NavigationSplitView.h"
 #include "peel/Adw/OverlaySplitView.h"
+#include "peel/Adw/ToastOverlay.h"
 #include "peel/Adw/ViewStack.h"
 #include "peel/Adw/ViewSwitcher.h"
 #include "peel/Gtk/Application.h"
+#include <cstdint>
 #include <peel/Adw/ApplicationWindow.h>
 #include <peel/GObject/Object.h>
 #include <peel/RefPtr.h>
@@ -17,14 +19,16 @@ using namespace peel;
 namespace FlyingPaper {
 namespace ApplicationWindow {
 class ApplicationWindow final : public Adw::ApplicationWindow {
-  PEEL_SIMPLE_CLASS(ApplicationWindow, Adw::ApplicationWindow);
+  PEEL_SIMPLE_CLASS(ApplicationWindow, Adw::ApplicationWindow)
   inline void init(Class *);
 
-  Adw::OverlaySplitView *overlay_split_view;
-  Adw::NavigationSplitView *navigation_split_view;
+  RefPtr<Adw::OverlaySplitView> overlay_split_view;
+  RefPtr<Adw::NavigationSplitView> navigation_split_view;
+  RefPtr<Adw::ToastOverlay> toast_overlay;
   void set_authenticated_content();
+  void handle_authentication(std::int32_t object_id);
 
-  Adw::ViewStack *view_stack_unauthenticated_content;
+  RefPtr<Adw::ViewStack> view_stack_unauthenticated_content;
   void set_unauthenticated_content();
 
   std::shared_ptr<Telegram::ClientManager> client_manager;

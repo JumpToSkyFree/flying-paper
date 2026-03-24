@@ -34,7 +34,7 @@ incdir = include_directories('include')
 flying_paper_headers = files([
   './include/Application.hpp',
   './include/ApplicationWindow.hpp',
-  './include/PhoneNumberLoginView.hpp',
+  './include/Views/PhoneNumberLoginView.hpp',
   './include/Telegram/ClientManager.hpp',
   './include/Telegram/Internal/ClientManagerAccessor.hpp',
   './include/Telegram/Internal/ClientManagerImpl.hpp'
@@ -43,7 +43,7 @@ flying_paper_headers = files([
 flying_paper_sources = files([
   './src/Application.cpp',
   './src/ApplicationWindow.cpp',
-  './src/PhoneNumberLoginView.cpp',
+  './src/Views/PhoneNumberLoginView.cpp',
   './src/Telegram/ClientManager.cpp'
   ])
 
@@ -57,9 +57,7 @@ dependencies = [libadwaita, gtk, peel, tdjson, tdclient,
   cc.find_library('tdactor',   static: true),
   cc.find_library('tdutils',   static: true),
   cc.find_library('tde2e',     static: true),
-  # cc.find_library('tdtl',      static: true),
-  # cc.find_library('sqlite',    static: true),
-  cc.find_library('tdsqlite', static: true),
+  cc.find_library('tdsqlite',  static: true),
   dependency('sqlite3'),
   dependency('openssl'),
   cc.find_library('z'),
