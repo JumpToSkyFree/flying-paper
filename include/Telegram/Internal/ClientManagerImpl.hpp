@@ -26,7 +26,6 @@ struct ClientManager::ClientManagerPrivate {
 
   std::int32_t client_id{0};
   std::uint64_t query_id_counter{1};
-  std::uint64_t current_query_id{0};
   std::uint64_t authentication_query_id{0};
 
   std::mutex handlers_mtx;
@@ -38,6 +37,7 @@ struct ClientManager::ClientManagerPrivate {
   std::unordered_map<std::int32_t, std::unordered_map<std::uint64_t, Callback>>
       subscribers;
   std::unordered_map<std::uint64_t, Callback> handlers;
+  std::uint64_t initial_update_authorization_state{0};
 
   ClientManager::ClientManagerAuthorizationParams params;
 
@@ -60,11 +60,13 @@ struct ClientManager::ClientManagerPrivate {
     this->client_manager->send(this->client_id, id, std::move(request));
   }
   std::uint64_t subscribe(std::int32_t object_id, Callback callback) {
+    std::lock_guard<std::mutex> lock(subscribers_mtx);
     std::uint64_t subscribtion_id = ++this->next_subscription_id;
     this->subscribers[object_id][subscribtion_id] = callback;
     return subscribtion_id;
   }
   void unsubscribe(std::int32_t object_id, std::uint64_t subscription_id) {
+    std::lock_guard<std::mutex> lock(subscribers_mtx);
     auto it = this->subscribers.find(object_id);
     if (it != this->subscribers.end()) {
       it->second.erase(subscription_id);
@@ -75,6 +77,7 @@ struct ClientManager::ClientManagerPrivate {
     }
   }
   void loop() {
+    is_running.store(true);
     while (this->keep_running.load()) {
       td::ClientManager::Response response =
           this->client_manager->receive(10.0);
@@ -86,8 +89,6 @@ struct ClientManager::ClientManagerPrivate {
 
       if (response.request_id == 0) {
         const std::int32_t type_id = shared_obj->get_id();
-
-        std::lock_guard<std::mutex> lock(subscribers_mtx);
         auto it_map = this->subscribers.find(type_id);
 
         if (it_map != this->subscribers.end()) {
@@ -102,7 +103,6 @@ struct ClientManager::ClientManagerPrivate {
       } else {
         std::unordered_map<std::uint64_t, Callback>::iterator it =
             handlers.find(response.request_id);
-        std::lock_guard<std::mutex> lock(handlers_mtx);
         if (it != handlers.end()) {
           peel::GLib::idle_add([it, obj_copy = shared_obj]() {
             it->second(obj_copy);
@@ -121,11 +121,16 @@ struct ClientManager::ClientManagerPrivate {
     pthread_setname_np(worker_thread.native_handle(), "FlyingPaperTDLibWorker");
   }
   void stop_loop() {
-    send(td::td_api::make_object<td::td_api::close>(), {});
-    this->keep_running.store(false);
-    if (worker_thread.joinable())
-      worker_thread.join();
-    client_manager.reset();
+    if (is_running.load()) {
+      send(td::td_api::make_object<td::td_api::close>(), {});
+      this->keep_running.store(false);
+      if (worker_thread.joinable())
+        worker_thread.join();
+      client_manager.reset();
+      is_running.store(false);
+      initial_update_authorization_state = 0;
+      query_id_counter = 1;
+    }
   }
   void update_authorization_state(const SharedObject &obj) {
     const auto &update =
@@ -134,14 +139,11 @@ struct ClientManager::ClientManagerPrivate {
       std::int32_t id = update.authorization_state_->get_id();
       if (id == td::td_api::authorizationStateWaitTdlibParameters::ID) {
         on_authorization_state_update();
-      } else {
-        if (this->handle_authentication)
-          this->handle_authentication(id);
       }
     }
   }
   void authorize() {
-    this->subscribe(
+    initial_update_authorization_state = this->subscribe(
         td::td_api::updateAuthorizationState::ID,
         [this](const SharedObject &obj) { update_authorization_state(obj); });
   }
@@ -152,6 +154,7 @@ struct ClientManager::ClientManagerPrivate {
     request->use_message_database_ = true;
     request->use_secret_chats_ = true;
     request->api_id_ = this->params.api_id;
+    // request->use_test_dc_ = true;
     request->api_hash_ = this->params.api_hash;
     request->system_language_code_ = this->params.system_language;
     request->device_model_ = "Desktop";

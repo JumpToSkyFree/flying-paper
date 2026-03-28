@@ -9,7 +9,6 @@
 #include <Config/Config.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <peel/Adw/Adw.h>
 #include <peel/FloatPtr.h>
@@ -23,27 +22,18 @@ namespace FlyingPaper {
 namespace ApplicationWindow {
 PEEL_CLASS_IMPL(FlyingPaper::ApplicationWindow::ApplicationWindow,
                 "FlyingPaperApplicationWindow", Adw::ApplicationWindow);
-inline void ApplicationWindow::Class::init() { return; }
+inline void ApplicationWindow::Class::init() {}
 inline void ApplicationWindow::init(Class *) {
   set_title("Flying Paper");
-  set_default_size(700, 650);
-
-  Telegram::ClientManager::ClientManagerAuthorizationParams params = {
-      .api_id = FlyingPaper::Config::app_id,
-      .api_hash = FlyingPaper::Config::app_hash,
-      .system_language = "en",
-      .application_version = "0.1.0"};
-
-  this->client_manager = Telegram::ClientManager::create(params);
-  this->client_manager->start_loop();
-  this->client_manager->authorize();
-
-  this->client_manager->on_authentication([this](std::int32_t object_id) {
-    this->handle_authentication(object_id);
-  });
+  set_default_size(1000, 750);
 }
 void ApplicationWindow::handle_authentication(std::int32_t object_id) {
   switch (object_id) {
+  // NOTE: temporrary solution while in development.
+  default:
+  case td::td_api::authorizationStateWaitOtherDeviceConfirmation::ID:
+  case td::td_api::authorizationStateWaitEmailCode::ID:
+  case td::td_api::authorizationStateWaitCode::ID:
   case td::td_api::authorizationStateWaitPhoneNumber::ID: {
     set_unauthenticated_content();
     break;
@@ -54,15 +44,21 @@ void ApplicationWindow::handle_authentication(std::int32_t object_id) {
   }
   }
 }
+void ApplicationWindow::setup() {
+  Telegram::ClientManagerAccessor::send(
+      client_manager,
+      td::td_api::make_object<td::td_api::getAuthorizationState>(),
+      [this](const Telegram::ClientManager::SharedObject &obj) {
+        this->handle_authentication(obj->get_id());
+      });
+}
 void ApplicationWindow::set_authenticated_content() {
-  if (toast_overlay->get_parent())
-    toast_overlay->unparent();
   overlay_split_view = Adw::OverlaySplitView::create();
   overlay_split_view->set_min_sidebar_width(300);
   overlay_split_view->set_max_sidebar_width(350);
   overlay_split_view->set_pin_sidebar(false);
   overlay_split_view->set_collapsed(true);
-  overlay_split_view->set_show_sidebar(true);
+  overlay_split_view->set_show_sidebar(false);
 
   navigation_split_view = Adw::NavigationSplitView::create();
   navigation_split_view->set_min_sidebar_width(300);
@@ -71,13 +67,13 @@ void ApplicationWindow::set_authenticated_content() {
   set_content(overlay_split_view);
 }
 void ApplicationWindow::set_unauthenticated_content() {
-  if (toast_overlay->get_parent())
-    toast_overlay->unparent();
   view_stack_unauthenticated_content = Adw::ViewStack::create();
 
   FloatPtr<Adw::HeaderBar> header_bar = Adw::HeaderBar::create();
+  header_bar->set_show_back_button(true);
   FloatPtr<Adw::ViewSwitcherBar> view_switcher_bar =
       Adw::ViewSwitcherBar::create();
+
   toast_overlay = Adw::ToastOverlay::create();
 
   RefPtr<Views::PhoneNumberLoginView> phone_number_view =
@@ -98,9 +94,12 @@ void ApplicationWindow::set_unauthenticated_content() {
   toolbar_view->add_bottom_bar(std::move(view_switcher_bar));
   set_content(std::move(toolbar_view));
 }
-ApplicationWindow *ApplicationWindow::create(Gtk::Application *app) {
+ApplicationWindow *ApplicationWindow::create(
+    Gtk::Application *app,
+    std::shared_ptr<Telegram::ClientManager> client_manager) {
   ApplicationWindow *window =
       Object::create<ApplicationWindow>(prop_application(), app);
+  window->client_manager = client_manager;
   return window;
 }
 } // namespace ApplicationWindow

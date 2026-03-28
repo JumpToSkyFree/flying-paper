@@ -9,8 +9,6 @@ cc = meson.get_compiler('cpp')
 gtk = dependency('gtk4')
 peel = dependency('peel')
 libadwaita = dependency('libadwaita-1', version : '>= 1.5', required: true)
-tdjson = dependency('tdjson', version : '>= 1.8')
-tdclient = dependency('tdclient')
 
 peel_gen = find_program('peel-gen')
 peel_gen_command = [
@@ -35,6 +33,7 @@ flying_paper_headers = files([
   './include/Application.hpp',
   './include/ApplicationWindow.hpp',
   './include/Views/PhoneNumberLoginView.hpp',
+  './include/Views/VerificationCodeInsertView.hpp',
   './include/Telegram/ClientManager.hpp',
   './include/Telegram/Internal/ClientManagerAccessor.hpp',
   './include/Telegram/Internal/ClientManagerImpl.hpp'
@@ -43,11 +42,15 @@ flying_paper_headers = files([
 flying_paper_sources = files([
   './src/Application.cpp',
   './src/ApplicationWindow.cpp',
+  './src/Telegram/ClientManager.cpp',
   './src/Views/PhoneNumberLoginView.cpp',
-  './src/Telegram/ClientManager.cpp'
+  './src/Views/VerificationCodeInsertView.cpp',
   ])
 
-dependencies = [libadwaita, gtk, peel, tdjson, tdclient, 
+dependencies = [
+  libadwaita,
+  gtk,
+  peel,
   cc.find_library('tdclient',  static: true),
   cc.find_library('tdapi',     static: true),
   cc.find_library('tdcore',    static: true),
@@ -63,7 +66,7 @@ dependencies = [libadwaita, gtk, peel, tdjson, tdclient,
   cc.find_library('z'),
   cc.find_library('dl'),
   cc.find_library('pthread'),
-  ]
+]
 
 executable('flying-paper',
   'main.cpp',

@@ -16,8 +16,7 @@
 
 using namespace peel;
 
-namespace FlyingPaper {
-namespace ApplicationWindow {
+namespace FlyingPaper::ApplicationWindow {
 class ApplicationWindow final : public Adw::ApplicationWindow {
   PEEL_SIMPLE_CLASS(ApplicationWindow, Adw::ApplicationWindow)
   inline void init(Class *);
@@ -34,8 +33,10 @@ class ApplicationWindow final : public Adw::ApplicationWindow {
   std::shared_ptr<Telegram::ClientManager> client_manager;
 
 public:
-  static ApplicationWindow *create(Gtk::Application *app);
+  static ApplicationWindow *
+  create(Gtk::Application *app,
+         std::shared_ptr<Telegram::ClientManager> client_manager);
+  void setup();
 };
-} // namespace ApplicationWindow
-} // namespace FlyingPaper
+} // namespace FlyingPaper::ApplicationWindow
 #endif
