@@ -17,6 +17,7 @@ class Application final : public Adw::Application {
   inline void init(Class *);
   inline void vfunc_activate();
   inline void vfunc_dispose();
+  inline void vfunc_startup();
   void action_quit(Gio::SimpleAction *, GLib::Variant *);
   void action_about(Gio::SimpleAction *, GLib::Variant *);
   std::shared_ptr<Telegram::ClientManager> client_manager;

@@ -34,10 +34,12 @@ flying_paper_headers = files([
   './include/ApplicationWindow.hpp',
   './include/Views/PhoneNumberLoginView.hpp',
   './include/Views/VerificationCodeInsertView.hpp',
+  './include/Views/SidebarView.hpp',
   './include/Telegram/ClientManager.hpp',
   './include/Telegram/Internal/ClientManagerAccessor.hpp',
   './include/Telegram/Internal/ClientManagerImpl.hpp',
-  './include/Telegram/Session.hpp'
+  './include/Telegram/Session.hpp',
+  './include/Avatar.hpp'
   ])
 
 flying_paper_sources = files([
@@ -45,8 +47,10 @@ flying_paper_sources = files([
   './src/ApplicationWindow.cpp',
   './src/Telegram/ClientManager.cpp',
   './src/Views/PhoneNumberLoginView.cpp',
+  './src/Views/SidebarView.cpp',
   './src/Views/VerificationCodeInsertView.cpp',
-  './src/Telegram/Session.cpp'
+  './src/Telegram/Session.cpp',
+  './src/Avatar.cpp'
   ])
 
 dependencies = [

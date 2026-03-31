@@ -2,14 +2,20 @@
 #include "ApplicationWindow.hpp"
 #include "Telegram/ClientManager.hpp"
 #include "Telegram/Session.hpp"
+#include "gtk/gtk.h"
+#include "peel/Gdk/Display.h"
 #include "peel/Gio/ActionMap.h"
 #include "peel/Gio/ApplicationFlags.h"
+#include "peel/Gio/File.h"
 #include "peel/Gio/SimpleAction.h"
+#include "peel/Gtk/CssProvider.h"
+#include "peel/Gtk/StyleContext.h"
 #include "peel/Gtk/Window.h"
 #include <Application.hpp>
 #include <Config/Config.hpp>
 #include <Telegram/ClientManager.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
+#include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
@@ -26,6 +32,18 @@ RefPtr<Application> Application::create() {
 void Application::Class::init() {
   override_vfunc_activate<Application>();
   override_vfunc_dispose<Application>();
+  override_vfunc_startup<Application>();
+}
+inline void Application::vfunc_startup() {
+  parent_vfunc_startup<Application>();
+  RefPtr<Gio::File> css_file =
+      Gio::File::create_for_path("../styles/style.css");
+  RefPtr<Gtk::CssProvider> css_provider = Gtk::CssProvider::create();
+  css_provider->load_from_file(css_file);
+
+  auto display = Gdk::Display::get_default();
+  Gtk::StyleContext::add_provider_for_display(display, css_provider,
+                                              GTK_STYLE_PROVIDER_PRIORITY_USER);
 }
 inline void Application::vfunc_dispose() {
   parent_vfunc_dispose<Application>();
@@ -65,7 +83,7 @@ void Application::action_quit(Gio::SimpleAction *, GLib::Variant *) {
 }
 void Application::action_about(Gio::SimpleAction *, GLib::Variant *) {
   Gtk::Window *parent_window = get_active_window();
-  if (parent_window && !parent_window->check_type<Gtk::Window>())
+  if (parent_window and !parent_window->check_type<Gtk::Window>())
     parent_window = nullptr;
 
   // TODO: show informations about the application.

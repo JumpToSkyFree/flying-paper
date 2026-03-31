@@ -1,6 +1,8 @@
 #include "Telegram/ClientManager.hpp"
 #include "Views/PhoneNumberLoginView.hpp"
+#include "Views/SidebarView.hpp"
 #include "peel/Adw/HeaderBar.h"
+#include "peel/Adw/NavigationPage.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Adw/ToolbarView.h"
 #include "peel/Adw/ViewStack.h"
@@ -26,6 +28,7 @@ inline void ApplicationWindow::Class::init() {}
 inline void ApplicationWindow::init(Class *) {
   set_title("Flying Paper");
   set_default_size(1000, 750);
+  add_css_class("devel");
   setup();
 }
 void ApplicationWindow::handle_authentication(std::int32_t object_id) {
@@ -63,6 +66,14 @@ void ApplicationWindow::set_authenticated_content() {
   navigation_split_view = Adw::NavigationSplitView::create();
   navigation_split_view->set_min_sidebar_width(300);
   navigation_split_view->set_max_sidebar_width(400);
+
+  FloatPtr<Views::Sidebar> sidebar = Views::Sidebar::create();
+  sidebar_page = Adw::NavigationPage::create(sidebar, "Flying Paper");
+  sidebar_page->set_child(sidebar);
+  sidebar_page->set_visible(true);
+  sidebar_page->set_child_visible(true);
+  navigation_split_view->set_sidebar(sidebar_page);
+
   overlay_split_view->set_content(this->navigation_split_view);
   set_content(overlay_split_view);
 }
