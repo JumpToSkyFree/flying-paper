@@ -1,13 +1,13 @@
 #ifndef FLYING_PAPER_APPLICATION_WINDOW_HPP
 #define FLYING_PAPER_APPLICATION_WINDOW_HPP
 
-#include "Telegram/ClientManager.hpp"
 #include "peel/Adw/NavigationSplitView.h"
 #include "peel/Adw/OverlaySplitView.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Adw/ViewStack.h"
 #include "peel/Adw/ViewSwitcher.h"
 #include "peel/Gtk/Application.h"
+#include <Telegram/ClientManager.hpp>
 #include <cstdint>
 #include <peel/Adw/ApplicationWindow.h>
 #include <peel/GObject/Object.h>
@@ -30,12 +30,8 @@ class ApplicationWindow final : public Adw::ApplicationWindow {
   RefPtr<Adw::ViewStack> view_stack_unauthenticated_content;
   void set_unauthenticated_content();
 
-  std::shared_ptr<Telegram::ClientManager> client_manager;
-
 public:
-  static ApplicationWindow *
-  create(Gtk::Application *app,
-         std::shared_ptr<Telegram::ClientManager> client_manager);
+  static ApplicationWindow *create(Gtk::Application *app);
   void setup();
 };
 } // namespace FlyingPaper::ApplicationWindow

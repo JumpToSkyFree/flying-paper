@@ -15,7 +15,6 @@
 #include "peel/Gtk/Widget.h"
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Views/PhoneNumberLoginView.hpp>
-#include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/GObject/Type.h>
@@ -89,8 +88,7 @@ inline void PhoneNumberLoginView::vfunc_dispose() {
   }
   if (wait_code_subscribtion_id != 0) {
     Telegram::ClientManagerAccessor::unsubscribe(
-        client_manager, td::td_api::updateAuthorizationState::ID,
-        wait_code_subscribtion_id);
+        td::td_api::updateAuthorizationState::ID, wait_code_subscribtion_id);
     wait_code_subscribtion_id = 0;
   }
   parent_vfunc_dispose<PhoneNumberLoginView>();
@@ -98,7 +96,6 @@ inline void PhoneNumberLoginView::vfunc_dispose() {
 void PhoneNumberLoginView::handle_send_code(VerificationCodeInsertView *) {
   std::string verification_code = verification_view->get_verification_code();
   Telegram::ClientManagerAccessor::send(
-      client_manager,
       td::td_api::make_object<td::td_api::checkAuthenticationCode>(
           verification_code),
       [this](const Telegram::ClientManager::SharedObject &obj) {
@@ -124,7 +121,7 @@ inline void PhoneNumberLoginView::init(Class *) {
   set_halign(Gtk::Align::CENTER);
   set_valign(Gtk::Align::CENTER);
   insert_view = Object::create<PhoneNumberInsertView>();
-  verification_view = VerificationCodeInsertView::create(client_manager);
+  verification_view = VerificationCodeInsertView::create();
   verification_view->set_n_entries(5);
   verification_view->connect_signal(
       "continue-clicked",
@@ -136,18 +133,17 @@ inline void PhoneNumberLoginView::init(Class *) {
   view_stack->add_named(verification_view, "verification");
   insert_view->connect_signal("next-clicked", [this](PhoneNumberInsertView *) {
     Telegram::ClientManagerAccessor::send(
-        client_manager,
         td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(
             insert_view->get_phone_number(), nullptr),
         [this](const Telegram::ClientManager::SharedObject &obj) {
           this->handle_authentication_failed(obj);
         });
   });
+  setup();
   set_parent(view_stack);
 }
 void PhoneNumberLoginView::setup() {
   Telegram::ClientManagerAccessor::send(
-      client_manager,
       td::td_api::make_object<td::td_api::getAuthorizationState>(),
       [this](const Telegram::ClientManager::SharedObject &obj) {
         switch (obj->get_id()) {
@@ -160,7 +156,7 @@ void PhoneNumberLoginView::setup() {
         }
       });
   wait_code_subscribtion_id = Telegram::ClientManagerAccessor::subscribe(
-      client_manager, td::td_api::updateAuthorizationState::ID,
+      td::td_api::updateAuthorizationState::ID,
       [this](const Telegram::ClientManager::SharedObject &obj) {
         const auto &object =
             Telegram::ClientManager::cast<td::td_api::updateAuthorizationState>(
@@ -183,12 +179,9 @@ void PhoneNumberLoginView::handle_authentication_failed(
   }
 }
 FloatPtr<PhoneNumberLoginView> PhoneNumberLoginView::create(
-    std::shared_ptr<Telegram::ClientManager> client_manager,
     peel::RefPtr<peel::Adw::ToastOverlay> toast_overlay) {
   auto ptr = Object::create<PhoneNumberLoginView>();
-  ptr->client_manager = client_manager;
   ptr->toast_overlay = toast_overlay;
-  ptr->setup();
   return ptr;
 }
 } // namespace FlyingPaper::Views

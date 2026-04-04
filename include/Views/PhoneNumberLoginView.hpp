@@ -67,8 +67,7 @@ class PhoneNumberLoginView final : public Gtk::Widget {
 
 public:
   static FloatPtr<PhoneNumberLoginView>
-  create(std::shared_ptr<Telegram::ClientManager> client_manager,
-         RefPtr<Adw::ToastOverlay> toast_overlay);
+  create(RefPtr<Adw::ToastOverlay> toast_overlay);
   void setup();
 };
 } // namespace FlyingPaper::Views

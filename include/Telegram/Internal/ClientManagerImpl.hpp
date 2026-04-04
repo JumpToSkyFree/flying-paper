@@ -15,6 +15,7 @@
 #include <td/tl/TlObject.h>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 namespace FlyingPaper {
 namespace Telegram {
@@ -31,7 +32,7 @@ struct ClientManager::ClientManagerPrivate {
   std::mutex handlers_mtx;
   std::mutex subscribers_mtx;
 
-  std::thread worker_thread;
+  std::thread loop_thread;
 
   std::uint64_t next_subscription_id{1};
   std::unordered_map<std::int32_t, std::unordered_map<std::uint64_t, Callback>>
@@ -84,48 +85,65 @@ struct ClientManager::ClientManagerPrivate {
       if (!response.object)
         continue;
 
+      std::uint64_t request_id = response.request_id;
       auto shared_obj =
           std::shared_ptr<td::td_api::Object>(response.object.release());
 
       if (response.request_id == 0) {
         const std::int32_t type_id = shared_obj->get_id();
-        auto it_map = this->subscribers.find(type_id);
 
-        if (it_map != this->subscribers.end()) {
-          for (auto const &[id, cb] : it_map->second) {
-            // cb(response.object);
-            peel::GLib::idle_add([cb, obj_copy = shared_obj]() {
-              cb(obj_copy);
-              return G_SOURCE_REMOVE;
-            });
+        std::vector<Callback> callbacks_snapshot;
+        {
+          std::lock_guard<std::mutex> lock(subscribers_mtx);
+          auto it_map = this->subscribers.find(type_id);
+
+          if (it_map != this->subscribers.end()) {
+            callbacks_snapshot.reserve(it_map->second.size());
+            for (const auto &pair : it_map->second) {
+              callbacks_snapshot.push_back(pair.second);
+            }
           }
         }
-      } else {
-        std::unordered_map<std::uint64_t, Callback>::iterator it =
-            handlers.find(response.request_id);
-        if (it != handlers.end()) {
-          peel::GLib::idle_add([it, obj_copy = shared_obj]() {
-            it->second(obj_copy);
+        for (auto const &cb : callbacks_snapshot) {
+          peel::GLib::idle_add([cb = std::move(cb), obj_copy = shared_obj]() {
+            cb(obj_copy);
             return G_SOURCE_REMOVE;
           });
         }
+      } else {
+        Callback callback;
+        {
+          std::lock_guard<std::mutex> lock(handlers_mtx);
+          auto it = handlers.find(request_id);
+          if (it != handlers.end()) {
+            callback = std::move(it->second);
+            handlers.erase(it);
+          }
+        }
+        if (callback)
+          peel::GLib::idle_add(
+              [cb = std::move(callback), obj_copy = shared_obj]() {
+                cb(obj_copy);
+                return G_SOURCE_REMOVE;
+              });
       }
     }
     is_running.store(false);
   }
   void start_loop() {
-    if (is_running.load() || worker_thread.joinable())
+    if (is_running.load() || loop_thread.joinable())
       return;
-    is_running = true;
-    worker_thread = std::thread([this]() { this->loop(); });
-    pthread_setname_np(worker_thread.native_handle(), "FlyingPaperTDLibWorker");
+    is_running.store(true);
+    loop_thread = std::thread([this]() { this->loop(); });
+    pthread_setname_np(loop_thread.native_handle(),
+                       "FlyingPaperTDLibLoopThread");
   }
   void stop_loop() {
     if (is_running.load()) {
       send(td::td_api::make_object<td::td_api::close>(), {});
       this->keep_running.store(false);
-      if (worker_thread.joinable())
-        worker_thread.join();
+      if (loop_thread.joinable())
+        loop_thread.join();
       client_manager.reset();
       is_running.store(false);
       initial_update_authorization_state = 0;

@@ -1,6 +1,7 @@
 #include "peel/Adw/Application.h"
 #include "ApplicationWindow.hpp"
 #include "Telegram/ClientManager.hpp"
+#include "Telegram/Session.hpp"
 #include "peel/Gio/ActionMap.h"
 #include "peel/Gio/ApplicationFlags.h"
 #include "peel/Gio/SimpleAction.h"
@@ -33,18 +34,19 @@ inline void Application::vfunc_dispose() {
 void Application::vfunc_activate() {
   parent_vfunc_activate<Application>();
 
+  auto session = Session::Session::get();
   Telegram::ClientManager::ClientManagerAuthorizationParams params = {
       .api_id = FlyingPaper::Config::app_id,
       .api_hash = FlyingPaper::Config::app_hash,
       .system_language = "en",
       .application_version = "0.1.0"};
 
-  client_manager = Telegram::ClientManager::create(params);
-  auto *window =
-      ApplicationWindow::ApplicationWindow::create(this, client_manager);
+  session->set_client(Telegram::ClientManager::create(params));
+  client_manager = session->get_client();
+  auto *window = ApplicationWindow::ApplicationWindow::create(this);
   client_manager->authorize();
   Telegram::ClientManagerAccessor::subscribe(
-      client_manager, td::td_api::updateAuthorizationState::ID,
+      td::td_api::updateAuthorizationState::ID,
       [window](const Telegram::ClientManager::SharedObject &) {
         window->setup();
         window->present();
@@ -66,7 +68,7 @@ void Application::action_about(Gio::SimpleAction *, GLib::Variant *) {
   if (parent_window && !parent_window->check_type<Gtk::Window>())
     parent_window = nullptr;
 
-  // TODO: Show informations about the application.
+  // TODO: show informations about the application.
 }
 } // namespace Application
 } // namespace FlyingPaper

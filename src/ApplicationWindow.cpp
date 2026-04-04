@@ -8,8 +8,8 @@
 #include <ApplicationWindow.hpp>
 #include <Config/Config.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
+#include <Telegram/Session.hpp>
 #include <cstdint>
-#include <memory>
 #include <peel/Adw/Adw.h>
 #include <peel/FloatPtr.h>
 #include <peel/GLib/GLib.h>
@@ -26,6 +26,7 @@ inline void ApplicationWindow::Class::init() {}
 inline void ApplicationWindow::init(Class *) {
   set_title("Flying Paper");
   set_default_size(1000, 750);
+  setup();
 }
 void ApplicationWindow::handle_authentication(std::int32_t object_id) {
   switch (object_id) {
@@ -46,7 +47,6 @@ void ApplicationWindow::handle_authentication(std::int32_t object_id) {
 }
 void ApplicationWindow::setup() {
   Telegram::ClientManagerAccessor::send(
-      client_manager,
       td::td_api::make_object<td::td_api::getAuthorizationState>(),
       [this](const Telegram::ClientManager::SharedObject &obj) {
         this->handle_authentication(obj->get_id());
@@ -77,7 +77,7 @@ void ApplicationWindow::set_unauthenticated_content() {
   toast_overlay = Adw::ToastOverlay::create();
 
   RefPtr<Views::PhoneNumberLoginView> phone_number_view =
-      Views::PhoneNumberLoginView::create(this->client_manager, toast_overlay);
+      Views::PhoneNumberLoginView::create(toast_overlay);
   view_stack_unauthenticated_content->add_titled_with_icon(
       phone_number_view, "phone_number", "Phone Number",
       "input-dialpad-symbolic");
@@ -94,12 +94,9 @@ void ApplicationWindow::set_unauthenticated_content() {
   toolbar_view->add_bottom_bar(std::move(view_switcher_bar));
   set_content(std::move(toolbar_view));
 }
-ApplicationWindow *ApplicationWindow::create(
-    Gtk::Application *app,
-    std::shared_ptr<Telegram::ClientManager> client_manager) {
+ApplicationWindow *ApplicationWindow::create(Gtk::Application *app) {
   ApplicationWindow *window =
       Object::create<ApplicationWindow>(prop_application(), app);
-  window->client_manager = client_manager;
   return window;
 }
 } // namespace ApplicationWindow

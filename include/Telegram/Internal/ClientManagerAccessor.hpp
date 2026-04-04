@@ -1,3 +1,4 @@
+#include "Telegram/Session.hpp"
 #include <Telegram/ClientManager.hpp>
 #include <Telegram/Internal/ClientManagerImpl.hpp>
 #include <memory>
@@ -8,24 +9,29 @@ namespace FlyingPaper {
 namespace Telegram {
 class ClientManagerAccessor {
 public:
-  static void send(std::shared_ptr<ClientManager> &manager,
-                   td::tl_object_ptr<td::td_api::Function> function,
+  static void send(td::tl_object_ptr<td::td_api::Function> function,
                    ClientManager::Callback callback) {
-    if (manager)
-      manager->impl->send(std::move(function), callback);
+    auto session = Session::Session::get();
+    auto client = session->get_client();
+    if (!client)
+      return;
+    client->impl->send(std::move(function), callback);
   }
-  static std::uint64_t subscribe(std::shared_ptr<ClientManager> &manager,
-                                 std::int32_t object_id,
+  static std::uint64_t subscribe(std::int32_t object_id,
                                  ClientManager::Callback callback) {
-    if (manager)
-      return manager->impl->subscribe(object_id, std::move(callback));
-    return -1;
+    auto session = Session::Session::get();
+    auto client = session->get_client();
+    if (!client)
+      return -1;
+    return client->impl->subscribe(object_id, std::move(callback));
   }
-  static void unsubscribe(std::shared_ptr<ClientManager> &manager,
-                          std::int32_t object_id,
+  static void unsubscribe(std::int32_t object_id,
                           std::uint64_t subscription_id) {
-    if (manager)
-      manager->impl->unsubscribe(object_id, subscription_id);
+    auto session = Session::Session::get();
+    auto client = session->get_client();
+    if (!client)
+      return;
+    client->impl->unsubscribe(object_id, subscription_id);
   }
 };
 } // namespace Telegram

@@ -55,6 +55,10 @@ public:
   template <typename T> static const T &cast(const SharedObject &obj) {
     return static_cast<const T &>(*obj);
   }
+  template <typename T>
+  static std::shared_ptr<T> cast_ptr(const SharedObject &obj) {
+    return std::static_pointer_cast<T>(obj);
+  }
 };
 } // namespace Telegram
 } // namespace FlyingPaper

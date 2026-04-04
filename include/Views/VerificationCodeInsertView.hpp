@@ -1,6 +1,5 @@
 #ifndef FLYING_PAPER_VERIFICATION_CODE_INSERT_VIEW_HPP
 #define FLYING_PAPER_VERIFICATION_CODE_INSERT_VIEW_HPP
-#include "Telegram/ClientManager.hpp"
 #include "peel/Adw/StatusPage.h"
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Button.h"
@@ -9,12 +8,12 @@
 #include "peel/Gtk/ShortcutController.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
-#include <memory>
 #include <peel/Adw/Adw.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
 #include <peel/property.h>
 #include <peel/signal.h>
+#include <string>
 #include <vector>
 using namespace peel;
 namespace FlyingPaper::Views {
@@ -32,7 +31,6 @@ class VerificationCodeInsertView final : public Gtk::Widget {
         .set(&VerificationCodeInsertView::set_n_entries);
   }
 
-  std::shared_ptr<Telegram::ClientManager> client_manager;
   RefPtr<Gtk::Box> inputs_box;
   Adw::StatusPage *status_page;
   std::vector<Gtk::Entry *> entries;
@@ -55,8 +53,7 @@ class VerificationCodeInsertView final : public Gtk::Widget {
   static Signal<VerificationCodeInsertView, void(void)> sig_continue_clicked;
 
 public:
-  static FloatPtr<VerificationCodeInsertView>
-  create(std::shared_ptr<Telegram::ClientManager> client_manager);
+  static FloatPtr<VerificationCodeInsertView> create();
   void setup();
   void set_n_entries(std::uint32_t entries);
   std::uint32_t get_n_entries() const { return n_entries; }

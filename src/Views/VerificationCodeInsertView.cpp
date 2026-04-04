@@ -1,4 +1,3 @@
-#include "Telegram/ClientManager.hpp"
 #include "peel/Adw/StatusPage.h"
 #include "peel/GLib/DateTime.h"
 #include "peel/GLib/functions.h"
@@ -135,11 +134,9 @@ void VerificationCodeInsertView::init(Class *) {
 
   set_parent(std::move(_status_page));
 }
-FloatPtr<VerificationCodeInsertView> VerificationCodeInsertView::create(
-    std::shared_ptr<Telegram::ClientManager> client_manager) {
+FloatPtr<VerificationCodeInsertView> VerificationCodeInsertView::create() {
   FloatPtr<VerificationCodeInsertView> ptr =
       Object::create<VerificationCodeInsertView>();
-  ptr->client_manager = client_manager;
   ptr->setup();
   return ptr;
 }
