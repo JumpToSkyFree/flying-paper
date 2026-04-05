@@ -1,22 +1,28 @@
 #include "Avatar.hpp"
 #include "Telegram/ClientManager.hpp"
-#include "glib.h"
+#include "Telegram/Session.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/OverlaySplitView.h"
 #include "peel/Adw/Toast.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Gdk/Texture.h"
 #include "peel/Gio/File.h"
+#include "peel/Gio/Menu.h"
+#include "peel/Gtk/Application.h"
 #include "peel/Gtk/BinLayout.h"
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Button.h"
 #include "peel/Gtk/HeaderBar.h"
 #include "peel/Gtk/LayoutManager.h"
+#include "peel/Gtk/MenuButton.h"
 #include "peel/Gtk/Orientation.h"
 #include "peel/Gtk/Picture.h"
+#include "peel/Gtk/Popover.h"
+#include "peel/Gtk/PopoverMenu.h"
 #include "peel/Gtk/Widget.h"
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Views/SidebarView.hpp>
+#include <any>
 #include <cstdint>
 #include <peel/FloatPtr.h>
 #include <peel/RefPtr.h>
@@ -39,14 +45,33 @@ inline void Sidebar::vfunc_dispose() {
 }
 void Sidebar::make_profile_avatar() {
   avatar = Widgets::Avatar::create_from_text(true, "My Name", 32);
-  avatar->connect_signal("avatar-clicked",
-                         [](Widgets::Avatar *) { g_print("Avatar clicked."); });
+  avatar->connect_signal("avatar-clicked", [](Widgets::Avatar *) {});
+}
+FloatPtr<Gtk::MenuButton> Sidebar::make_menu() {
+  RefPtr<Gio::Menu> menu = Gio::Menu::create();
+  menu->append("Quit", "app.quit");
+
+  FloatPtr<Gtk::PopoverMenu> popover_menu =
+      Gtk::PopoverMenu::create_from_model(menu);
+
+  FloatPtr<Gtk::MenuButton> ret = Gtk::MenuButton::create();
+  ret->set_popover(std::move(popover_menu));
+  ret->set_icon_name("open-menu-symbolic");
+  ret->set_tooltip_text("Menu");
+  ret->set_focus_on_click(true);
+  return ret;
 }
 FloatPtr<Adw::HeaderBar> Sidebar::make_header_bar() {
   FloatPtr<Adw::HeaderBar> header_bar = Adw::HeaderBar::create();
   make_profile_avatar();
+  auto session = Session::Session::get();
+  session->request_context<td::td_api::user>("me", [this](std::any data) {
+    const auto &user = Session::Session::cast<td::td_api::user>(data);
+    handle_get_user_request(user);
+  });
   header_bar->add_css_class("flat");
   header_bar->pack_start(avatar);
+  header_bar->pack_end(make_menu());
   return header_bar;
 }
 inline void Sidebar::init(Class *) {
@@ -61,11 +86,7 @@ inline void Sidebar::init(Class *) {
 
   set_parent(toast_overlay);
 }
-FloatPtr<Sidebar> Sidebar::create() {
-  FloatPtr<Sidebar> ptr = Object::create<Sidebar>();
-  ptr->setup();
-  return ptr;
-}
+FloatPtr<Sidebar> Sidebar::create() { return Object::create<Sidebar>(); }
 void Sidebar::set_avatar_fullname(const td::td_api::user &user) {
   std::string fullname;
   if (user.first_name_.length()) {
@@ -140,12 +161,5 @@ void Sidebar::handle_get_user_request(
     break;
   }
   }
-}
-void Sidebar::setup() {
-  Telegram::ClientManagerAccessor::send(
-      td::td_api::make_object<td::td_api::getMe>(),
-      [this](const Telegram::ClientManager::SharedObject &obj) {
-        handle_get_user_request(obj);
-      });
 }
 } // namespace FlyingPaper::Views

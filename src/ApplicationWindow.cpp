@@ -56,6 +56,15 @@ void ApplicationWindow::setup() {
       });
 }
 void ApplicationWindow::set_authenticated_content() {
+  Telegram::ClientManagerAccessor::send(
+      td::td_api::make_object<td::td_api::getMe>(),
+      [](const Telegram::ClientManager::SharedObject &obj) {
+        auto session = Session::Session::get();
+        const auto &user =
+            Telegram::ClientManager::cast_ptr<td::td_api::user>(obj);
+        session->set_context("me", user);
+      });
+
   overlay_split_view = Adw::OverlaySplitView::create();
   overlay_split_view->set_min_sidebar_width(300);
   overlay_split_view->set_max_sidebar_width(350);
@@ -93,7 +102,7 @@ void ApplicationWindow::set_unauthenticated_content() {
       phone_number_view, "phone_number", "Phone Number",
       "input-dialpad-symbolic");
 
-  // TODO: Add login with QR code.
+  // TODO: add login with QR code.
 
   view_switcher_bar->set_stack(view_stack_unauthenticated_content);
   view_switcher_bar->set_reveal(true);

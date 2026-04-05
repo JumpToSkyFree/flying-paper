@@ -1,6 +1,7 @@
 #include "peel/Adw/Avatar.h"
 #include "glib.h"
 #include "peel/Gtk/BinLayout.h"
+#include "peel/Gtk/Button.h"
 #include "peel/Gtk/LayoutManager.h"
 #include "peel/Gtk/Picture.h"
 #include "peel/Gtk/Widget.h"
@@ -25,8 +26,6 @@ inline void Avatar::init(Class *) {
   set_name("clickable-avatar");
   avatar = Adw::Avatar::create(get_avatar_size(), text.c_str(), true);
   if (clickable) {
-    // TODO: set the button to take the shape of the avatar.
-    // TODO: connect to clicked signal and emit "avatar-clicked" signal.
     make_avatar_clickable_button();
     set_parent(avatar_clickable);
   } else {
@@ -59,7 +58,7 @@ void Avatar::make_avatar_clickable_button() {
   avatar_clickable->add_css_class("rounded");
   avatar_clickable->set_child(avatar);
   avatar_clickable->connect_signal(
-      "clicked", [this](Adw::Avatar *) { sig_avatar_clicked.emit(this); });
+      "clicked", [this](Gtk::Button *) { sig_avatar_clicked.emit(this); });
 }
 void Avatar::set_avatar_size(guint size) {
   if (!avatar)

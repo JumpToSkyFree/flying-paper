@@ -2,9 +2,6 @@ button.rounded {
   border-radius: 9999px; /* Force a circle */
   padding-left: 4px;
   padding-top: 4px;
-  padding-bottom: 3px;
-  padding-right: 3px;
-  display: flex; /* Turn the container into a flex container */
-  justify-content: center; /* Center children horizontally */
-  align-items: center; /* Center children vertically */
+  padding-bottom: 4px;
+  padding-right: 4px;
 }

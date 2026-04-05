@@ -8,6 +8,7 @@
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Gtk/Button.h"
 #include "peel/Gtk/GestureClick.h"
+#include "peel/Gtk/MenuButton.h"
 #include "peel/Gtk/Widget.h"
 #include <peel/FloatPtr.h>
 #include <peel/Gtk/Box.h>
@@ -28,12 +29,11 @@ class Sidebar final : public Gtk::Widget {
   Gtk::Box *container;
   RefPtr<Adw::ToastOverlay> toast_overlay;
   RefPtr<Gtk::GestureClick> avatar_click_controller;
-  // RefPtr<Adw::Avatar> avatar;
-  // RefPtr<Gtk::Button> avatar_button;
   RefPtr<Widgets::Avatar> avatar;
   std::uint64_t file_update_subscription_id;
 
   FloatPtr<Adw::HeaderBar> make_header_bar();
+  FloatPtr<Gtk::MenuButton> make_menu();
   void make_profile_avatar();
 
   void set_avatar_fullname(const td::td_api::user &);
@@ -46,7 +46,6 @@ class Sidebar final : public Gtk::Widget {
 
 public:
   static FloatPtr<Sidebar> create();
-  void setup();
 };
 } // namespace FlyingPaper::Views
 
