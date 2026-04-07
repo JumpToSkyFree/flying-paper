@@ -76,7 +76,7 @@ FloatPtr<Adw::HeaderBar> Sidebar::make_header_bar() {
 }
 inline void Sidebar::init(Class *) {
   FloatPtr<Gtk::Box> container =
-      Gtk::Box::create(Gtk::Orientation::VERTICAL, 16);
+      Gtk::Box::create(Gtk::Orientation::VERTICAL, 0);
   FloatPtr<Adw::HeaderBar> header_bar = make_header_bar();
 
   toast_overlay = Adw::ToastOverlay::create();
