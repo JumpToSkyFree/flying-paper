@@ -33,6 +33,40 @@ public:
       return;
     client->impl->unsubscribe(object_id, subscription_id);
   }
+  template <typename T = td::td_api::Object>
+  static void
+  handle(const ClientManager::SharedObject &obj,
+         std::function<void(const std::shared_ptr<T> &)> on_success,
+         std::function<void(const std::shared_ptr<td::td_api::error> &)>
+             on_error) {
+    if (on_error && obj->get_id() == td::td_api::error::ID) {
+      on_error(
+          ClientManager::cast_ptr<td::td_api::Object, td::td_api::error>(obj));
+      return;
+    }
+    if (on_success && obj->get_id() == T::ID) {
+      on_success(ClientManager::cast_ptr<td::td_api::Object, T>(obj));
+      return;
+    }
+  }
+  template <typename U, typename T>
+  static void
+  handle(const std::shared_ptr<U> &obj,
+         std::function<void(const std::shared_ptr<T> &)> on_success,
+         std::function<void(const std::shared_ptr<td::td_api::error> &)>
+             on_error) {
+    if (on_error && obj->get_id() == td::td_api::error::ID) {
+      std::shared_ptr<td::td_api::Object> _obj =
+          std::static_pointer_cast<td::td_api::Object>(obj);
+      on_error(
+          ClientManager::cast_ptr<td::td_api::Object, td::td_api::error>(_obj));
+      return;
+    }
+    if (on_success && obj->get_id() == T::ID) {
+      on_success(ClientManager::cast_ptr<U, T>(obj));
+      return;
+    }
+  }
 };
 } // namespace Telegram
 } // namespace FlyingPaper

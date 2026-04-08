@@ -55,10 +55,26 @@ public:
   template <typename T> static const T &cast(const SharedObject &obj) {
     return static_cast<const T &>(*obj);
   }
+
   template <typename T>
   static std::shared_ptr<T> cast_ptr(const SharedObject &obj) {
     return std::static_pointer_cast<T>(obj);
   }
+
+  template <typename U, typename T>
+  static std::shared_ptr<T> cast_ptr(const std::shared_ptr<U> &obj) {
+    return std::static_pointer_cast<T>(obj);
+  }
+
+  template <typename U, typename T>
+  static std::shared_ptr<T> cast_ptr(td::td_api::object_ptr<U> obj) {
+    return std::shared_ptr<T>(static_cast<T *>(obj.release()));
+  }
+
+  void download_file(const td::td_api::object_ptr<td::td_api::file> &file,
+                     std::int32_t priority,
+                     std::function<void(const td::td_api::file &)> on_success,
+                     std::function<void(const td::td_api::error &)> on_error);
 };
 } // namespace Telegram
 } // namespace FlyingPaper

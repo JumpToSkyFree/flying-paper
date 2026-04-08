@@ -15,6 +15,7 @@
 #include "peel/Gtk/Widget.h"
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Views/PhoneNumberLoginView.hpp>
+#include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/GObject/Type.h>
@@ -99,18 +100,15 @@ void PhoneNumberLoginView::handle_send_code(VerificationCodeInsertView *) {
       td::td_api::make_object<td::td_api::checkAuthenticationCode>(
           verification_code),
       [this](const Telegram::ClientManager::SharedObject &obj) {
-        switch (obj->get_id()) {
-        case td::td_api::error::ID: {
-          const td::td_api::error &error =
-              Telegram::ClientManager::cast<td::td_api::error>(obj);
-          if (error.message_ == "PHONE_CODE_INVALID") {
-            toast = Adw::Toast::create("Wrong verification code");
-            this->toast_overlay->dismiss_all();
-            this->toast_overlay->add_toast(toast);
-          }
-          break;
-        }
-        }
+        Telegram::ClientManagerAccessor::handle<td::td_api::ok>(
+            obj, nullptr,
+            [this](const std::shared_ptr<td::td_api::error> &error) {
+              if (error->message_ == "PHONE_CODE_INVALID") {
+                toast = Adw::Toast::create("Phone code invalid");
+                this->toast_overlay->dismiss_all();
+                this->toast_overlay->add_toast(toast);
+              }
+            });
       });
 }
 inline void PhoneNumberLoginView::init(Class *) {
@@ -136,7 +134,14 @@ inline void PhoneNumberLoginView::init(Class *) {
         td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(
             insert_view->get_phone_number(), nullptr),
         [this](const Telegram::ClientManager::SharedObject &obj) {
-          this->handle_authentication_failed(obj);
+          Telegram::ClientManagerAccessor::handle<td::td_api::ok>(
+              obj, nullptr, [this](std::shared_ptr<td::td_api::error> error) {
+                if (error->message_ == "PHONE_NUMBER_INVALID") {
+                  toast = Adw::Toast::create("Invalid phone number");
+                  this->toast_overlay->dismiss_all();
+                  this->toast_overlay->add_toast(toast);
+                }
+              });
         });
   });
   setup();
@@ -166,17 +171,6 @@ void PhoneNumberLoginView::setup() {
           view_stack->set_visible_child(verification_view);
         }
       });
-}
-void PhoneNumberLoginView::handle_authentication_failed(
-    const Telegram::ClientManager::SharedObject &obj) {
-  if (obj->get_id() == td::td_api::error::ID) {
-    const auto &error = Telegram::ClientManager::cast<td::td_api::error>(obj);
-    if (error.message_ == "PHONE_NUMBER_INVALID") {
-      toast = Adw::Toast::create("Invalid phone number");
-      this->toast_overlay->dismiss_all();
-      this->toast_overlay->add_toast(toast);
-    }
-  }
 }
 FloatPtr<PhoneNumberLoginView> PhoneNumberLoginView::create(
     peel::RefPtr<peel::Adw::ToastOverlay> toast_overlay) {

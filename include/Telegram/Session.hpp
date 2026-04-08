@@ -5,7 +5,6 @@
 #include "glib.h"
 #include "peel/GLib/functions.h"
 #include <algorithm>
-#include <any>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -16,12 +15,12 @@
 namespace FlyingPaper::Session {
 class Session {
 public:
-  using Request = std::function<void(std::any)>;
+  using Request = std::function<void(std::shared_ptr<void>)>;
   using RequestHandle = std::uint64_t;
 
 private:
   std::shared_ptr<Telegram::ClientManager> client;
-  std::unordered_map<std::string, std::any> contexts;
+  std::unordered_map<std::string, std::shared_ptr<void>> contexts;
   std::unordered_map<std::string,
                      std::vector<std::pair<RequestHandle, Request>>>
       pending_requests;
@@ -39,6 +38,26 @@ public:
   void set_context(std::string_view name, Ptr<T> ctx);
 
   template <typename T>
+  std::shared_ptr<T> set_context(std::string_view name, T &ctx) {
+    auto ptr = std::make_shared<T>(ctx);
+    std::lock_guard<std::mutex> lock(registry_mtx);
+
+    std::string key(name);
+
+    contexts[key] = ptr;
+    if (pending_requests.contains(key)) {
+      for (auto &pair : pending_requests[key]) {
+        peel::GLib::idle_add([_ptr = ptr, _task = pair.second]() {
+          _task(_ptr);
+          return G_SOURCE_REMOVE;
+        });
+      }
+    }
+
+    return ptr;
+  }
+
+  template <typename T>
   void set_context(std::string_view name, std::shared_ptr<T> ctx) {
     std::lock_guard<std::mutex> lock(registry_mtx);
 
@@ -49,19 +68,15 @@ public:
     if (pending_requests.contains(key)) {
       for (auto &pair : pending_requests[key]) {
         peel::GLib::idle_add([_ctx = ctx, _task = pair.second]() {
-          _task(std::any(_ctx));
+          _task(_ctx);
           return G_SOURCE_REMOVE;
         });
       }
     }
   }
-  template <typename T> static std::shared_ptr<T> cast(std::any &obj) {
-    try {
-      return std::any_cast<std::shared_ptr<T>>(obj);
-    } catch (std::bad_any_cast &e) {
-      g_warning("Session: Failed to cast context! %s\n", e.what());
-      return nullptr;
-    }
+  template <typename T>
+  static std::shared_ptr<T> cast(std::shared_ptr<void> &obj) {
+    return std::static_pointer_cast<T>(obj);
   }
   template <typename T>
   RequestHandle request_context(std::string name, Request request) {
@@ -72,7 +87,7 @@ public:
     if (contexts.contains(name)) {
       auto ctx = contexts[name];
       peel::GLib::idle_add([_ctx = ctx, request]() {
-        request(std::any(_ctx));
+        request(_ctx);
         return G_SOURCE_REMOVE;
       });
     }

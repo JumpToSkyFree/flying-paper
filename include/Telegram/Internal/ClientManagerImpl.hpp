@@ -89,7 +89,7 @@ struct ClientManager::ClientManagerPrivate {
       auto shared_obj =
           std::shared_ptr<td::td_api::Object>(response.object.release());
 
-      if (response.request_id == 0) {
+      if (request_id == 0) {
         const std::int32_t type_id = shared_obj->get_id();
 
         std::vector<Callback> callbacks_snapshot;
@@ -105,6 +105,8 @@ struct ClientManager::ClientManagerPrivate {
           }
         }
         for (auto const &cb : callbacks_snapshot) {
+          if (!cb)
+            continue;
           peel::GLib::idle_add([cb = std::move(cb), obj_copy = shared_obj]() {
             cb(obj_copy);
             return G_SOURCE_REMOVE;

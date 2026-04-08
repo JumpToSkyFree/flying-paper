@@ -61,8 +61,6 @@ class PhoneNumberLoginView final : public Gtk::Widget {
   inline void vfunc_dispose();
 
   void send_phone_number(const Telegram::ClientManager::SharedObject &obj);
-  void handle_authentication_failed(
-      const Telegram::ClientManager::SharedObject &obj);
   void handle_send_code(VerificationCodeInsertView *verification_code_view);
 
 public:
