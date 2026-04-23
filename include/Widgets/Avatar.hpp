@@ -51,6 +51,11 @@ public:
   static RefPtr<Avatar> create_from_text(gboolean clickable, peel::String text,
                                          guint avatar_size);
 
+  static RefPtr<Avatar> create_from_picture(gboolean clickable,
+                                            peel::String text,
+                                            RefPtr<Gtk::Picture> picture,
+                                            guint avatar_size);
+
   gboolean get_clickable() const { return clickable; }
   void set_clickable(gboolean clickable);
 

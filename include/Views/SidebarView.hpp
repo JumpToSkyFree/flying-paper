@@ -1,8 +1,8 @@
 #ifndef FLYING_PAPER_SIDEBAR_VIEW_HPP
 #define FLYING_PAPER_SIDEBAR_VIEW_HPP
 
-#include "Avatar.hpp"
-#include "Telegram/ClientManager.hpp"
+#include "Widgets/Avatar.hpp"
+#include "Widgets/ChatListItem.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/OverlaySplitView.h"
 #include "peel/Adw/ToastOverlay.h"
@@ -10,11 +10,13 @@
 #include "peel/Gtk/GestureClick.h"
 #include "peel/Gtk/MenuButton.h"
 #include "peel/Gtk/Widget.h"
+#include <cstdint>
 #include <peel/FloatPtr.h>
 #include <peel/Gtk/Box.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
 #include <td/telegram/td_api.h>
+#include <unordered_map>
 
 using namespace peel;
 
@@ -35,14 +37,16 @@ class Sidebar final : public Gtk::Widget {
   FloatPtr<Adw::HeaderBar> make_header_bar();
   FloatPtr<Gtk::MenuButton> make_menu();
   void make_profile_avatar();
+  td::td_api::object_ptr<td::td_api::ChatList> chat_list;
+
+  std::unordered_map<std::int64_t, RefPtr<Widgets::ChatListItem>> chats_map;
 
   void set_avatar_fullname(const td::td_api::user &);
   void set_avatar_image(const td::td_api::file &);
-  void handle_get_user_request(const Telegram::ClientManager::SharedObject &);
-  void handle_user_profile_image(
-      const td::td_api::object_ptr<td::td_api::profilePhoto> &);
-  void handle_user_profile_image_download_request(
-      const td::td_api::file &file, std::uint64_t file_update_subscription_id);
+  void load_chats();
+
+  std::uint64_t update_new_chat_subscription{0};
+  std::uint64_t update_chat_position{0};
 
 public:
   static FloatPtr<Sidebar> create();

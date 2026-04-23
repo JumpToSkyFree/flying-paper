@@ -8,7 +8,8 @@ cc = meson.get_compiler('cpp')
 
 gtk = dependency('gtk4')
 peel = dependency('peel')
-libadwaita = dependency('libadwaita-1', version : '>= 1.5', required: true)
+libadwaita = dependency('libadwaita-1', version : '>= 1.5', required : true)
+pixbuf = dependency('gdk-pixbuf-2.0', version : '>= 2.0', required : true)
 
 peel_gen = find_program('peel-gen')
 peel_gen_command = [
@@ -39,8 +40,11 @@ flying_paper_headers = files([
   './include/Telegram/Internal/ClientManagerAccessor.hpp',
   './include/Telegram/Internal/ClientManagerImpl.hpp',
   './include/Telegram/Session.hpp',
-  './include/Avatar.hpp',
-  './include/ChatListItem.hpp'
+  './include/Widgets/Avatar.hpp',
+  './include/Widgets/ChatListItem.hpp',
+  './include/Widgets/DateTime.hpp',
+  './include/Widgets/LastMessage.hpp',
+  './include/Widgets/ScrolledContainer.hpp'
   ])
 
 flying_paper_sources = files([
@@ -51,14 +55,18 @@ flying_paper_sources = files([
   './src/Views/SidebarView.cpp',
   './src/Views/VerificationCodeInsertView.cpp',
   './src/Telegram/Session.cpp',
-  './src/Avatar.cpp',
-  './src/ChatListItem.cpp'
+  './src/Widgets/Avatar.cpp',
+  './src/Widgets/ChatListItem.cpp',
+  './src/Widgets/DateTime.cpp',
+  './src/Widgets/LastMessage.cpp',
+  './src/Widgets/ScrolledContainer.cpp'
   ])
 
 dependencies = [
   libadwaita,
   gtk,
   peel,
+  pixbuf,
   cc.find_library('tdclient',  static: true),
   cc.find_library('tdapi',     static: true),
   cc.find_library('tdcore',    static: true),

@@ -12,3 +12,7 @@ button.rounded {
   margin-top: 5px;
   margin-bottom: 5px;
 }
+
+.chat-list-item-picture {
+  border-radius: 8px; /* Force a circle */
+}

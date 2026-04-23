@@ -5,10 +5,12 @@
 #include "peel/Gtk/LayoutManager.h"
 #include "peel/Gtk/Picture.h"
 #include "peel/Gtk/Widget.h"
-#include <Avatar.hpp>
+#include <Widgets/Avatar.hpp>
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/GObject/Type.h>
+#include <peel/RefPtr.h>
+#include <peel/String.h>
 #include <peel/class.h>
 #include <peel/signal.h>
 
@@ -53,9 +55,21 @@ RefPtr<Avatar> Avatar::create_from_text(gboolean clickable, peel::String text,
                                avatar_size, prop_text(), text);
   return ret;
 }
+RefPtr<Avatar> Avatar::create_from_picture(gboolean clickable,
+                                           peel::String text,
+                                           RefPtr<Gtk::Picture> picture,
+                                           guint avatar_size) {
+
+  FloatPtr<Avatar> ret =
+      ::Object::create<Avatar>(prop_clickable(), clickable, prop_avatar_size(),
+                               avatar_size, prop_text(), text);
+  ret->set_picture(picture);
+  return ret;
+}
 void Avatar::make_avatar_clickable_button() {
   avatar_clickable = Gtk::Button::create();
   avatar_clickable->add_css_class("rounded");
+  avatar_clickable->add_css_class("flat");
   avatar_clickable->set_child(avatar);
   avatar_clickable->connect_signal(
       "clicked", [this](Gtk::Button *) { sig_avatar_clicked.emit(this); });
