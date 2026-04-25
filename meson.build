@@ -1,7 +1,8 @@
 project('flying-paper', 'cpp', default_options : [
   'cpp_std=c++23,c++20',
   'warning_level=3',
-  'werror=false'
+  'werror=false',
+  'optimization=0'
   ])
 
 cc = meson.get_compiler('cpp')

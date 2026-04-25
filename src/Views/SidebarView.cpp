@@ -2,6 +2,7 @@
 #include "Telegram/Session.hpp"
 #include "Widgets/Avatar.hpp"
 #include "Widgets/ChatListItem.hpp"
+#include "Widgets/LastMessage.hpp"
 #include "Widgets/ScrolledContainer.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/OverlaySplitView.h"
@@ -25,6 +26,7 @@
 #include "peel/Gtk/Widget.h"
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Views/SidebarView.hpp>
+#include <cstdint>
 #include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/RefPtr.h>
@@ -44,13 +46,17 @@ inline void Sidebar::vfunc_dispose() {
     container->unparent();
     container = nullptr;
   }
-  if (update_new_chat_subscription != 0) {
+  if (update_new_chat_subscription) {
     Telegram::ClientManagerAccessor::unsubscribe(
         td::td_api::updateNewMessage::ID, update_new_chat_subscription);
   }
-  if (update_chat_position != 0) {
+  if (update_chat_position) {
     Telegram::ClientManagerAccessor::unsubscribe(
         td::td_api::updateChatPosition::ID, update_chat_position);
+  }
+  if (update_new_chat) {
+    Telegram::ClientManagerAccessor::unsubscribe(
+        td::td_api::updateChatPosition::ID, update_new_chat);
   }
 }
 void Sidebar::make_profile_avatar() {
@@ -116,24 +122,10 @@ inline void Sidebar::init(Class *) {
 
   RefPtr<Widgets::ScrolledContainer> scrolled_container =
       Widgets::ScrolledContainer::create();
-
-  // TODO: Make recursive calls to loadChats until we receive an 404 error,
-  // indicating that no more chats are available.
-  scrolled_container->on_threshold_reached([]() {
-    Telegram::ClientManagerAccessor::send(
-        td::td_api::make_object<td::td_api::loadChats>(),
-        [](const Telegram::ClientManager::SharedObject &obj) {
-          Telegram::ClientManagerAccessor::handle<td::td_api::ok>(
-              obj, nullptr, [](const std::shared_ptr<td::td_api::error> &) {
-                // TODO: No more loading, done.
-              });
-        });
-  });
-
   RefPtr<Gtk::ScrolledWindow> scrolled_win =
       scrolled_container->get_scrolled_window();
 
-  RefPtr<Gtk::Box> chats_box = Gtk::Box::create(Gtk::Orientation::VERTICAL, 8);
+  chats_box = Gtk::Box::create(Gtk::Orientation::VERTICAL, 8);
   scrolled_win->set_child(chats_box);
   scrolled_win->set_vexpand(true);
   chats_box->set_vexpand(true);
@@ -146,43 +138,28 @@ inline void Sidebar::init(Class *) {
 
   container->append(std::move(header_bar));
   container->append(scrolled_container);
-  Telegram::ClientManagerAccessor::send(
-      td::td_api::make_object<td::td_api::getChats>(std::move(chat_list), 300),
-      [this, _container = container,
-       chats_box](const Telegram::ClientManager::SharedObject &obj) {
-        Telegram::ClientManagerAccessor::handle<td::td_api::chats>(
+
+  update_new_chat = Telegram::ClientManagerAccessor::subscribe(
+      td::td_api::updateNewChat::ID,
+      [this](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<td::td_api::updateNewChat>(
             obj,
-            [chats_box,
-             _container](const std::shared_ptr<td::td_api::chats> &chats) {
-              for (std::size_t i = 0; i < chats->chat_ids_.size(); i++) {
-                Telegram::ClientManagerAccessor::send(
-                    td::td_api::make_object<td::td_api::getChat>(
-                        chats->chat_ids_[i]),
-                    [chats_box](
-                        const Telegram::ClientManager::SharedObject &obj) {
-                      Telegram::ClientManagerAccessor::handle<td::td_api::chat>(
-                          obj,
-                          [chats_box](
-                              const std::shared_ptr<td::td_api::chat> &chat) {
-                            FloatPtr<Widgets::ChatListItem> chat_list_item =
-                                Widgets::ChatListItem::create();
-                            chat_list_item->set_chat(chat);
-                            chats_box->append(std::move(chat_list_item));
-                          },
-                          nullptr);
-                    });
-              }
+            [this](const std::shared_ptr<td::td_api::updateNewChat> &new_chat) {
+              const auto &chat =
+                  Telegram::ClientManager::cast_ptr<td::td_api::chat,
+                                                    td::td_api::chat>(
+                      std::move(new_chat->chat_));
+              FloatPtr<Widgets::ChatListItem> chat_list_item =
+                  Widgets::ChatListItem::create();
+              chat_list_item->set_chat(chat);
+              chats_box->append(std::move(chat_list_item));
             },
-            [this](const std::shared_ptr<td::td_api::error> &error) {
-              RefPtr<Adw::Toast> toast =
-                  Adw::Toast::create(error->message_.c_str());
-              toast_overlay->add_toast(std::move(toast));
-            });
+            nullptr);
       });
 
   update_new_chat_subscription = Telegram::ClientManagerAccessor::subscribe(
       td::td_api::updateNewMessage::ID,
-      [chats_box](const Telegram::ClientManager::SharedObject &obj) {
+      [this](const Telegram::ClientManager::SharedObject &obj) {
         const auto &new_message =
             Telegram::ClientManager::cast_ptr<td::td_api::updateNewMessage>(
                 obj);
@@ -201,23 +178,147 @@ inline void Sidebar::init(Class *) {
 
   update_chat_position = Telegram::ClientManagerAccessor::subscribe(
       td::td_api::updateChatPosition::ID,
-      [chats_box](const Telegram::ClientManager::SharedObject &obj) {
+      [this](const Telegram::ClientManager::SharedObject &obj) {
         const auto &_update_chat_position =
             Telegram::ClientManager::cast_ptr<td::td_api::updateChatPosition>(
                 obj);
-        Gtk::Widget *it = chats_box->get_first_child();
-        std::int64_t pos{0};
-        while (it) {
-          if (pos == _update_chat_position->position_->order_) {
-            chats_box->reorder_child_after(it, chats_box->get_next_sibling());
-            break;
-          }
-          pos++;
-          it = it->get_next_sibling();
+        Widgets::ChatListItem *widget =
+            find_chat_by_id(_update_chat_position->chat_id_);
+        widget->set_order(_update_chat_position->position_->order_);
+        if (_update_chat_position->position_->order_ == 0) {
+          chats_box->reorder_child_after(widget, nullptr);
+          return;
         }
+        // Gtk::Widget *it = chats_box->get_first_child();
+        // while (it) {
+        //   auto item = static_cast<Widgets::ChatListItem *>(it);
+        //   if (widget->get_order() > item->get_order()) {
+        //     chats_box->reorder_child_after(widget, it);
+        //     return;
+        //   }
+        //   it = it->get_next_sibling();
+        // }
+        order_chat_item_position(widget);
       });
 
+  Telegram::ClientManagerAccessor::subscribe(
+      td::td_api::updateChatLastMessage::ID,
+      [this](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<
+            td::td_api::updateChatLastMessage>(
+            obj,
+            [this](const std::shared_ptr<td::td_api::updateChatLastMessage>
+                       &last_message) {
+              const auto &last_message_ =
+                  Telegram::ClientManager::cast_ptr<td::td_api::message,
+                                                    td::td_api::message>(
+                      std::move(last_message->last_message_));
+              Widgets::ChatListItem *item =
+                  find_chat_by_id(last_message->chat_id_);
+              if (item) {
+                item->set_last_message(last_message_);
+                RefPtr<Widgets::LastMessage> last_message =
+                    item->get_last_message();
+                if (last_message_) {
+                  Telegram::ClientManagerAccessor::send(
+                      td::td_api::make_object<td::td_api::getChat>(
+                          last_message_->chat_id_),
+                      [last_message, last_message_](
+                          const Telegram::ClientManager::SharedObject &obj) {
+                        Telegram::ClientManagerAccessor::handle<
+                            td::td_api::chat>(
+                            obj,
+                            [last_message, last_message_](
+                                const std::shared_ptr<td::td_api::chat> &chat) {
+                              // TODO: Add two checkmarks to indicate that the
+                              // outgoing message was by recipient.
+                              const bool isRead =
+                                  last_message_->is_outgoing_ ||
+                                  last_message_->id_ <=
+                                      chat->last_read_inbox_message_id_;
+                              last_message->set_read(isRead);
+                            },
+                            nullptr);
+                      });
+                }
+              }
+              for (const auto &pos : last_message->positions_) {
+                if (pos->list_->get_id() == td::td_api::chatListMain::ID) {
+                  item->set_order(pos->order_);
+                }
+              }
+              order_chat_item_position(item);
+            },
+            [](const std::shared_ptr<td::td_api::error> &) {
+              // TODO: Show error if last message of every contact can't be
+              // synced.
+            });
+      });
+
+  Telegram::ClientManagerAccessor::send(
+      td::td_api::make_object<td::td_api::loadChats>(nullptr, 30),
+      [](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<td::td_api::ok>(obj, nullptr,
+                                                                nullptr);
+      });
+
+  scrolled_container->on_threshold_reached([]() {
+    Telegram::ClientManagerAccessor::send(
+        td::td_api::make_object<td::td_api::loadChats>(
+            td::td_api::make_object<td::td_api::chatListMain>(), 30),
+        [](const Telegram::ClientManager::SharedObject &obj) {
+          Telegram::ClientManagerAccessor::handle<td::td_api::ok>(obj, nullptr,
+                                                                  nullptr);
+        });
+  });
+
   set_parent(toast_overlay);
+}
+void Sidebar::order_chat_item_position(Widgets::ChatListItem *item) {
+  Gtk::Widget *it = chats_box->get_first_child();
+  Gtk::Widget *prev = nullptr;
+
+  while (it) {
+    auto current_chat = static_cast<Widgets::ChatListItem *>(it);
+
+    // Skip comparing the item with itself if it's already in the box
+    if (current_chat == item) {
+      it = it->get_next_sibling();
+      continue;
+    }
+
+    // If our item is higher than current_chat, it belongs ABOVE it
+    if (item->get_order() > current_chat->get_order() ||
+        (item->get_order() == current_chat->get_order() &&
+         item->get_chat_id() > current_chat->get_chat_id())) {
+      if (prev == nullptr) {
+        // This means 'item' is now the highest; move to top
+        chats_box->reorder_child_after(item, nullptr);
+      } else {
+        // Place it after the one just above it
+        chats_box->reorder_child_after(item, prev);
+      }
+      return;
+    }
+
+    prev = it;
+    it = it->get_next_sibling();
+  }
+
+  // If it's the smallest order found, move it to the very bottom
+  chats_box->reorder_child_after(item, prev);
+}
+
+Widgets::ChatListItem *Sidebar::find_chat_by_id(std::int32_t id) {
+  Gtk::Widget *it = chats_box->get_first_child();
+  while (it) {
+    auto chat_list_item = static_cast<Widgets::ChatListItem *>(it);
+    if (chat_list_item->get_chat_id() == id) {
+      return chat_list_item;
+    }
+    it = it->get_next_sibling();
+  }
+  return nullptr;
 }
 FloatPtr<Sidebar> Sidebar::create() { return Object::create<Sidebar>(); }
 void Sidebar::set_avatar_fullname(const td::td_api::user &user) {

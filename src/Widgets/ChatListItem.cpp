@@ -20,6 +20,7 @@
 #include <peel/RefPtr.h>
 #include <peel/class.h>
 #include <td/telegram/td_api.h>
+#include <utility>
 
 namespace FlyingPaper::Widgets {
 PEEL_CLASS_IMPL(ChatListItem, "FlyingPaperChatListItem", Gtk::Widget);
@@ -178,6 +179,11 @@ void ChatListItem::set_chat(const std::shared_ptr<td::td_api::chat> &chat) {
             is_read, std::move(chat->last_message_->content_));
       }
     }
+    for (const auto &pos : chat->positions_) {
+      if (pos->list_->get_id() == td::td_api::chatListMain::ID) {
+        this->order = pos->order_;
+      }
+    }
     this->chat_id = chat->id_;
   }
 }
@@ -185,6 +191,7 @@ void ChatListItem::set_username(String username) { this->username = username; }
 void ChatListItem::set_chat_id(std::int32_t chat_id) {
   this->chat_id = chat_id;
 }
+void ChatListItem::set_order(std::int64_t order) { this->order = order; }
 FloatPtr<ChatListItem> ChatListItem::create() {
   return ::Object::create<ChatListItem>();
 }
@@ -194,14 +201,24 @@ void ChatListItem::set_new_message(
     if (new_message->message_) {
       this->set_timestamp(new_message->message_->date_);
       if (new_message->message_->content_) {
-        bool is_read = true;
-        if (!new_message->message_->is_outgoing_) {
-          is_read = false;
-        }
         last_message->set_message_content(
-            is_read, std::move(new_message->message_->content_));
+            new_message->message_->is_outgoing_,
+            std::move(new_message->message_->content_));
       }
     }
   }
+}
+void ChatListItem::set_last_message(
+    const std::shared_ptr<td::td_api::message> &_last_message) {
+  if (_last_message) {
+    this->set_timestamp(_last_message->date_);
+    if (_last_message->content_) {
+      last_message->set_message_content(_last_message->is_outgoing_,
+                                        std::move(_last_message->content_));
+    }
+  }
+}
+RefPtr<Widgets::LastMessage> ChatListItem::get_last_message() {
+  return last_message;
 }
 } // namespace FlyingPaper::Widgets

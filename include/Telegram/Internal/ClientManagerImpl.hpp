@@ -49,9 +49,6 @@ struct ClientManager::ClientManagerPrivate {
     client_manager = std::make_unique<td::ClientManager>();
     client_id = client_manager->create_client_id();
     this->send(td::td_api::make_object<td::td_api::getOption>("version"), {});
-    // NOTE: Only in development.
-    this->send(td::td_api::make_object<td::td_api::setLogVerbosityLevel>(0),
-               {});
   }
 
   ~ClientManagerPrivate() { stop_loop(); }

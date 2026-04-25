@@ -40,13 +40,18 @@ class Sidebar final : public Gtk::Widget {
   td::td_api::object_ptr<td::td_api::ChatList> chat_list;
 
   std::unordered_map<std::int64_t, RefPtr<Widgets::ChatListItem>> chats_map;
-
   void set_avatar_fullname(const td::td_api::user &);
   void set_avatar_image(const td::td_api::file &);
-  void load_chats();
+
+  Widgets::ChatListItem *find_chat_by_id(std::int32_t);
+  RefPtr<Gtk::Box> chats_box;
 
   std::uint64_t update_new_chat_subscription{0};
   std::uint64_t update_chat_position{0};
+  std::uint64_t update_new_chat{0};
+  std::uint64_t update_chat_read_inbox{0};
+
+  void order_chat_item_position(Widgets::ChatListItem *item);
 
 public:
   static FloatPtr<Sidebar> create();

@@ -28,7 +28,7 @@ class LastMessage final : public Gtk::Widget {
   RefPtr<Gtk::Image> image_content;
   bool read;
 
-  void set_label_markup(bool read, const std::string &text);
+  void set_label_with_markup(bool read, const std::string &text);
 
   PEEL_PROPERTY(bool, read, "read");
 

@@ -8,8 +8,8 @@
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Widget.h"
-#include <climits>
 #include <cstdint>
+#include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/RefPtr.h>
 #include <peel/String.h>
@@ -68,6 +68,7 @@ class ChatListItem final : public Gtk::Widget {
   FloatPtr<Gtk::Widget> chat_content;
   String username;
   std::int32_t chat_id;
+  std::int64_t order;
 
 public:
   static FloatPtr<ChatListItem> create();
@@ -82,9 +83,13 @@ public:
   void set_username(String);
   std::int32_t get_chat_id() const { return chat_id; }
   void set_chat_id(std::int32_t);
+  std::int64_t get_order() const { return order; }
+  void set_order(std::int64_t order);
 
   void set_chat(const std::shared_ptr<td::td_api::chat> &chat);
   void set_new_message(const std::shared_ptr<td::td_api::updateNewMessage> &);
+  void set_last_message(const std::shared_ptr<td::td_api::message> &);
+  RefPtr<Widgets::LastMessage> get_last_message();
 };
 } // namespace FlyingPaper::Widgets
 

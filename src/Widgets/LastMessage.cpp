@@ -52,7 +52,7 @@ inline void LastMessage::init(Class *) {
 RefPtr<LastMessage> LastMessage::create() {
   return ::Object::create<LastMessage>();
 }
-void LastMessage::set_label_markup(bool read, const std::string &text) {
+void LastMessage::set_label_with_markup(bool read, const std::string &text) {
   if (read) {
     String markup = "<span alpha='50%%'>%s</span>";
     markup = GLib::strdup_printf(markup, text.c_str());
@@ -68,6 +68,7 @@ void LastMessage::set_message_content(
     bool read,
     td::td_api::object_ptr<td::td_api::MessageContent> message_content) {
   if (message_content) {
+    bool is_message_content_set = false;
     auto _message_content =
         Telegram::ClientManager::cast_ptr<td::td_api::MessageContent,
                                           td::td_api::MessageContent>(
@@ -75,24 +76,26 @@ void LastMessage::set_message_content(
     Telegram::ClientManagerAccessor::handle<td::td_api::MessageContent,
                                             td::td_api::messageText>(
         _message_content,
-        [this, read](const std::shared_ptr<td::td_api::messageText> &text) {
+        [this, read, &is_message_content_set](
+            const std::shared_ptr<td::td_api::messageText> &text) {
           image_content->set_visible(false);
           text_content->set_visible(true);
-          set_label_markup(read, text->text_->text_);
+          set_label_with_markup(read, text->text_->text_);
+          is_message_content_set = true;
         },
         nullptr);
     Telegram::ClientManagerAccessor::handle<td::td_api::MessageContent,
                                             td::td_api::messageSticker>(
         _message_content,
-        [this,
-         read](const std::shared_ptr<td::td_api::messageSticker> &sticker) {
+        [this, read, &is_message_content_set](
+            const std::shared_ptr<td::td_api::messageSticker> &sticker) {
           text_content->set_visible(true);
           if (sticker->sticker_) {
             image_content->set_visible(true);
             auto session = Session::Session::get();
             auto client = session->get_client();
             std::string photo = "Sticker";
-            set_label_markup(read, photo);
+            set_label_with_markup(read, photo);
 
             // FIX: Gtk doesn't load webp formats by default.
 
@@ -105,20 +108,22 @@ void LastMessage::set_message_content(
                   image_content->set_from_paintable(picture->get_paintable());
                 },
                 nullptr);
+            is_message_content_set = true;
           }
         },
         nullptr);
     Telegram::ClientManagerAccessor::handle<td::td_api::MessageContent,
                                             td::td_api::messagePhoto>(
         _message_content,
-        [this, read](const std::shared_ptr<td::td_api::messagePhoto> &photo) {
+        [this, read, &is_message_content_set](
+            const std::shared_ptr<td::td_api::messagePhoto> &photo) {
           text_content->set_visible(true);
           if (photo) {
             if (photo->caption_->text_.length()) {
-              set_label_markup(read, photo->caption_->text_);
+              set_label_with_markup(read, photo->caption_->text_);
             } else {
               std::string photo = "Photo";
-              set_label_markup(read, photo);
+              set_label_with_markup(read, photo);
             }
             if (photo->photo_) {
               image_content->set_visible(true);
@@ -135,6 +140,7 @@ void LastMessage::set_message_content(
                           picture->get_paintable());
                     },
                     nullptr);
+                is_message_content_set = true;
               }
             }
           }
@@ -143,14 +149,15 @@ void LastMessage::set_message_content(
     Telegram::ClientManagerAccessor::handle<td::td_api::MessageContent,
                                             td::td_api::messageVideo>(
         _message_content,
-        [this, read](const std::shared_ptr<td::td_api::messageVideo> &video) {
+        [this, read, &is_message_content_set](
+            const std::shared_ptr<td::td_api::messageVideo> &video) {
           text_content->set_visible(true);
           if (video) {
             if (video->caption_->text_.length()) {
-              set_label_markup(read, video->caption_->text_);
+              set_label_with_markup(read, video->caption_->text_);
             } else {
               std::string photo = "Photo";
-              set_label_markup(read, photo);
+              set_label_with_markup(read, photo);
             }
             if (video->video_) {
               image_content->set_visible(true);
@@ -168,6 +175,7 @@ void LastMessage::set_message_content(
                           picture->get_paintable());
                     },
                     nullptr);
+                is_message_content_set = true;
               }
             }
           }
@@ -176,14 +184,15 @@ void LastMessage::set_message_content(
     Telegram::ClientManagerAccessor::handle<td::td_api::MessageContent,
                                             td::td_api::messageAnimation>(
         _message_content,
-        [this, read](const std::shared_ptr<td::td_api::messageAnimation> &gif) {
+        [this, read, &is_message_content_set](
+            const std::shared_ptr<td::td_api::messageAnimation> &gif) {
           text_content->set_visible(true);
           if (gif) {
             if (gif->caption_->text_.length()) {
-              set_label_markup(read, gif->caption_->text_);
+              set_label_with_markup(read, gif->caption_->text_);
             } else {
               std::string photo = "GIF";
-              set_label_markup(read, photo);
+              set_label_with_markup(read, photo);
             }
             if (gif->animation_) {
               image_content->set_visible(true);
@@ -201,15 +210,22 @@ void LastMessage::set_message_content(
                           picture->get_paintable());
                     },
                     nullptr);
+                is_message_content_set = true;
               }
             }
           }
         },
         nullptr);
+    if (!is_message_content_set) {
+      image_content->set_visible(false);
+      text_content->set_visible(true);
+      set_label_with_markup(true, "Message content not supported yet.");
+      is_message_content_set = true;
+    }
   }
 }
 void LastMessage::set_read(bool read) {
-  set_label_markup(read, text_content->get_text());
+  set_label_with_markup(read, text_content->get_text());
   this->read = read;
 }
 } // namespace FlyingPaper::Widgets
