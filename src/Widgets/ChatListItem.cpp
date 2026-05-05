@@ -2,23 +2,27 @@
 #include "Telegram/Session.hpp"
 #include "Widgets/Avatar.hpp"
 #include "glib.h"
+#include "gtk/gtk.h"
 #include "peel/Adw/Toast.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/GLib/DateTime.h"
 #include "peel/Gtk/BinLayout.h"
 #include "peel/Gtk/Box.h"
+#include "peel/Gtk/Button.h"
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Orientation.h"
 #include "peel/Gtk/Separator.h"
 #include "peel/Gtk/Widget.h"
 #include "peel/Pango/EllipsizeMode.h"
 #include <Widgets/ChatListItem.hpp>
+#include <functional>
 #include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/GObject/Type.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
+#include <peel/signal.h>
 #include <td/telegram/td_api.h>
 #include <utility>
 
@@ -27,11 +31,15 @@ PEEL_CLASS_IMPL(ChatListItem, "FlyingPaperChatListItem", Gtk::Widget);
 inline void ChatListItem::Class::init() {
   set_layout_manager_type(::Type::of<Gtk::BinLayout>());
   override_vfunc_dispose<ChatListItem>();
+
+  sig_on_click =
+      Signal<ChatListItem, void(void)>::create("chat-list-item-clicked");
 }
+Signal<ChatListItem, void(void)> ChatListItem::sig_on_click;
 inline void ChatListItem::vfunc_dispose() {
-  if (container) {
-    container->unparent();
-    container = nullptr;
+  if (button) {
+    button->unparent();
+    button = nullptr;
   }
   parent_vfunc_dispose<ChatListItem>();
 }
@@ -62,8 +70,14 @@ inline void ChatListItem::init(Class *) {
 
   RefPtr<Gtk::Box> _container =
       Gtk::Box::create(Gtk::Orientation::HORIZONTAL, 10);
-  add_css_class("chat-list-item");
   container = _container;
+  button = Gtk::Button::create();
+  button->add_css_class("flat");
+  button->add_css_class("chat-list-item");
+  button->connect_signal("clicked",
+                         [this](Gtk::Button *) { sig_on_click.emit(this); });
+  button->set_child(container);
+
   chat_title_label = Gtk::Label::create(get_chat_title());
   chat_title_label->set_ellipsize(Pango::EllipsizeMode::END);
   last_message = LastMessage::create();
@@ -87,7 +101,7 @@ inline void ChatListItem::init(Class *) {
 
   container->append(info_container);
 
-  set_parent(container);
+  set_parent(button);
 }
 FloatPtr<Gtk::Box>
 ChatListItem::make_horizontal_container(FloatPtr<Gtk::Widget> left,
@@ -218,6 +232,8 @@ void ChatListItem::set_last_message(
     }
   }
 }
+RefPtr<Gtk::Button> ChatListItem::get_button() { return button; }
+// void ChatListItem::set_on_click(std::function<void()> on_click) {}
 RefPtr<Widgets::LastMessage> ChatListItem::get_last_message() {
   return last_message;
 }

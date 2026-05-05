@@ -7,12 +7,17 @@ button.rounded {
 }
 
 .chat-list-item {
-  margin-left: 10px;
-  margin-right: 10px;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  /*margin-left: 3px;
+  margin-right: 3px;*/
+  /* border-radius: 8px; */ /* Force a circle */
+  border-radius: 0px;
 }
 
 .chat-list-item-picture {
-  border-radius: 8px; /* Force a circle */
+  border-radius: 9px; /* Force a circle */
 }
+

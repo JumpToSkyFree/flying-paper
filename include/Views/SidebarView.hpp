@@ -8,6 +8,7 @@
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Gtk/Button.h"
 #include "peel/Gtk/GestureClick.h"
+#include "peel/Gtk/Gtk.h"
 #include "peel/Gtk/MenuButton.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
@@ -15,6 +16,7 @@
 #include <peel/Gtk/Box.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
+#include <peel/signal.h>
 #include <td/telegram/td_api.h>
 #include <unordered_map>
 
@@ -52,6 +54,8 @@ class Sidebar final : public Gtk::Widget {
   std::uint64_t update_chat_read_inbox{0};
 
   void order_chat_item_position(Widgets::ChatListItem *item);
+
+  static peel::Signal<Sidebar, void()> on_click;
 
 public:
   static FloatPtr<Sidebar> create();

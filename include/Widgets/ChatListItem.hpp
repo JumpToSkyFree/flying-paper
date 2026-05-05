@@ -6,15 +6,18 @@
 #include "Widgets/LastMessage.hpp"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Gtk/Box.h"
+#include "peel/Gtk/Button.h"
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/RefPtr.h>
 #include <peel/String.h>
 #include <peel/class.h>
 #include <peel/property.h>
+#include <peel/signal.h>
 #include <td/telegram/td_api.h>
 
 using namespace peel;
@@ -24,24 +27,6 @@ class ChatListItem final : public Gtk::Widget {
   PEEL_SIMPLE_CLASS(ChatListItem, Gtk::Widget)
   inline void init(Class *);
   inline void vfunc_dispose();
-
-  // template <typename F> static void define_properties(F &f) {
-  //   f.prop(prop_chat_title(), "")
-  //       .get(&ChatListItem::get_chat_title)
-  //       .set(&ChatListItem::set_chat_title);
-  //   f.prop(prop_username(), "")
-  //       .get(&ChatListItem::get_username)
-  //       .set(&ChatListItem::set_username);
-  //   f.prop(prop_chat_content())
-  //       .get(&ChatListItem::get_chat_content)
-  //       .set(&ChatListItem::set_chat_content);
-  //   f.prop(prop_timestamp(), 0, 0, INT_MAX)
-  //       .get(&ChatListItem::get_timestamp)
-  //       .set(&ChatListItem::set_timestamp);
-  //   f.prop(prop_chat_id(), 0, 0, INT_MAX)
-  //       .get(&ChatListItem::get_chat_id)
-  //       .set(&ChatListItem::set_chat_id);
-  // }
 
   Gtk::Box *container;
   RefPtr<Widgets::Avatar> avatar;
@@ -53,6 +38,7 @@ class ChatListItem final : public Gtk::Widget {
   RefPtr<Gtk::Box> last_chat_sent_content_and_unread_nmessages_count;
   RefPtr<Gtk::Box> info_container;
   RefPtr<Widgets::LastMessage> last_message;
+  RefPtr<Gtk::Button> button;
 
   void set_avatar_text(const std::string &fullname);
   void
@@ -70,6 +56,9 @@ class ChatListItem final : public Gtk::Widget {
   std::int32_t chat_id;
   std::int64_t order;
 
+  static Signal<ChatListItem, void(void)> sig_on_click;
+  PEEL_SIGNAL_CONNECT_METHOD(chat_list_item_clicked, sig_on_click);
+
 public:
   static FloatPtr<ChatListItem> create();
 
@@ -85,11 +74,13 @@ public:
   void set_chat_id(std::int32_t);
   std::int64_t get_order() const { return order; }
   void set_order(std::int64_t order);
+  RefPtr<Gtk::Button> get_button();
 
   void set_chat(const std::shared_ptr<td::td_api::chat> &chat);
   void set_new_message(const std::shared_ptr<td::td_api::updateNewMessage> &);
   void set_last_message(const std::shared_ptr<td::td_api::message> &);
   RefPtr<Widgets::LastMessage> get_last_message();
+  // void set_on_click(std::function<void()>);
 };
 } // namespace FlyingPaper::Widgets
 

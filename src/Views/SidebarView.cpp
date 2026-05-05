@@ -4,6 +4,7 @@
 #include "Widgets/ChatListItem.hpp"
 #include "Widgets/LastMessage.hpp"
 #include "Widgets/ScrolledContainer.hpp"
+#include "glib.h"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/OverlaySplitView.h"
 #include "peel/Adw/Toast.h"
@@ -125,7 +126,7 @@ inline void Sidebar::init(Class *) {
   RefPtr<Gtk::ScrolledWindow> scrolled_win =
       scrolled_container->get_scrolled_window();
 
-  chats_box = Gtk::Box::create(Gtk::Orientation::VERTICAL, 8);
+  chats_box = Gtk::Box::create(Gtk::Orientation::VERTICAL, 0);
   scrolled_win->set_child(chats_box);
   scrolled_win->set_vexpand(true);
   chats_box->set_vexpand(true);
@@ -152,6 +153,10 @@ inline void Sidebar::init(Class *) {
               FloatPtr<Widgets::ChatListItem> chat_list_item =
                   Widgets::ChatListItem::create();
               chat_list_item->set_chat(chat);
+              chat_list_item->connect_signal(
+                  "chat-list-item-clicked", [](Widgets::ChatListItem *item) {
+                    g_print("%d\n", item->get_chat_id());
+                  });
               chats_box->append(std::move(chat_list_item));
             },
             nullptr);
@@ -215,6 +220,7 @@ inline void Sidebar::init(Class *) {
                       std::move(last_message->last_message_));
               Widgets::ChatListItem *item =
                   find_chat_by_id(last_message->chat_id_);
+              auto button = item->get_button();
               if (item) {
                 item->set_last_message(last_message_);
                 RefPtr<Widgets::LastMessage> last_message =
