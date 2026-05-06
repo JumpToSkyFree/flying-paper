@@ -3,6 +3,7 @@
 #include "Views/SidebarView.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/NavigationPage.h"
+#include "peel/Adw/NavigationSplitView.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Adw/ToolbarView.h"
 #include "peel/Adw/ViewStack.h"
@@ -12,6 +13,7 @@
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Telegram/Session.hpp>
 #include <cstdint>
+#include <memory>
 #include <peel/Adw/Adw.h>
 #include <peel/FloatPtr.h>
 #include <peel/GLib/GLib.h>
@@ -19,6 +21,7 @@
 #include <peel/RefPtr.h>
 #include <peel/class.h>
 #include <td/telegram/td_api.h>
+#include <utility>
 
 namespace FlyingPaper {
 namespace ApplicationWindow {

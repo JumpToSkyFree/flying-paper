@@ -52,6 +52,7 @@ public:
           return G_SOURCE_REMOVE;
         });
       }
+      pending_requests.erase(key);
     }
 
     return ptr;
@@ -72,6 +73,7 @@ public:
           return G_SOURCE_REMOVE;
         });
       }
+      pending_requests.erase(key);
     }
   }
   template <typename T>
@@ -90,6 +92,7 @@ public:
         request(_ctx);
         return G_SOURCE_REMOVE;
       });
+      return request_id;
     }
 
     pending_requests[name].push_back({request_id, request});

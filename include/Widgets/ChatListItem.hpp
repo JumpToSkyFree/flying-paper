@@ -8,6 +8,7 @@
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Button.h"
 #include "peel/Gtk/Label.h"
+#include "peel/Gtk/ToggleButton.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
 #include <functional>
@@ -38,7 +39,7 @@ class ChatListItem final : public Gtk::Widget {
   RefPtr<Gtk::Box> last_chat_sent_content_and_unread_nmessages_count;
   RefPtr<Gtk::Box> info_container;
   RefPtr<Widgets::LastMessage> last_message;
-  RefPtr<Gtk::Button> button;
+  RefPtr<Gtk::ToggleButton> button;
 
   void set_avatar_text(const std::string &fullname);
   void
@@ -53,7 +54,7 @@ class ChatListItem final : public Gtk::Widget {
   std::int32_t timestamp;
   FloatPtr<Gtk::Widget> chat_content;
   String username;
-  std::int32_t chat_id;
+  std::int64_t chat_id;
   std::int64_t order;
 
   static Signal<ChatListItem, void(void)> sig_on_click;
@@ -70,11 +71,11 @@ public:
   void set_timestamp(std::int32_t);
   String get_username() const { return username; }
   void set_username(String);
-  std::int32_t get_chat_id() const { return chat_id; }
-  void set_chat_id(std::int32_t);
+  std::int64_t get_chat_id() const { return chat_id; }
+  void set_chat_id(std::int64_t);
   std::int64_t get_order() const { return order; }
   void set_order(std::int64_t order);
-  RefPtr<Gtk::Button> get_button();
+  RefPtr<Gtk::ToggleButton> get_button();
 
   void set_chat(const std::shared_ptr<td::td_api::chat> &chat);
   void set_new_message(const std::shared_ptr<td::td_api::updateNewMessage> &);

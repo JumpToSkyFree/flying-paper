@@ -8,10 +8,10 @@
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/Gtk/Button.h"
 #include "peel/Gtk/GestureClick.h"
-#include "peel/Gtk/Gtk.h"
 #include "peel/Gtk/MenuButton.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
+#include <functional>
 #include <peel/FloatPtr.h>
 #include <peel/Gtk/Box.h>
 #include <peel/RefPtr.h>
@@ -25,6 +25,10 @@ using namespace peel;
 namespace FlyingPaper::Views {
 class Sidebar final : public Gtk::Widget {
   PEEL_SIMPLE_CLASS(Sidebar, Gtk::Widget)
+public:
+  using Callback = std::function<void(Widgets::ChatListItem *)>;
+
+private:
   friend Gtk::Widget;
 
   inline void init(Class *);
@@ -35,6 +39,7 @@ class Sidebar final : public Gtk::Widget {
   RefPtr<Gtk::GestureClick> avatar_click_controller;
   RefPtr<Widgets::Avatar> avatar;
   std::uint64_t file_update_subscription_id;
+  Callback cb;
 
   FloatPtr<Adw::HeaderBar> make_header_bar();
   FloatPtr<Gtk::MenuButton> make_menu();
@@ -45,7 +50,8 @@ class Sidebar final : public Gtk::Widget {
   void set_avatar_fullname(const td::td_api::user &);
   void set_avatar_image(const td::td_api::file &);
 
-  Widgets::ChatListItem *find_chat_by_id(std::int32_t);
+  Widgets::ChatListItem *find_chat_by_id(std::int64_t);
+  Widgets::ChatListItem *active_item{nullptr};
   RefPtr<Gtk::Box> chats_box;
 
   std::uint64_t update_new_chat_subscription{0};
@@ -59,6 +65,7 @@ class Sidebar final : public Gtk::Widget {
 
 public:
   static FloatPtr<Sidebar> create();
+  void set_on_chat_item_selected(Callback);
 };
 } // namespace FlyingPaper::Views
 

@@ -1,8 +1,6 @@
 #include "Telegram/Internal/ClientManagerAccessor.hpp"
 #include "Telegram/Session.hpp"
 #include "Widgets/Avatar.hpp"
-#include "glib.h"
-#include "gtk/gtk.h"
 #include "peel/Adw/Toast.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/GLib/DateTime.h"
@@ -12,6 +10,7 @@
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Orientation.h"
 #include "peel/Gtk/Separator.h"
+#include "peel/Gtk/ToggleButton.h"
 #include "peel/Gtk/Widget.h"
 #include "peel/Pango/EllipsizeMode.h"
 #include <Widgets/ChatListItem.hpp>
@@ -71,7 +70,7 @@ inline void ChatListItem::init(Class *) {
   RefPtr<Gtk::Box> _container =
       Gtk::Box::create(Gtk::Orientation::HORIZONTAL, 10);
   container = _container;
-  button = Gtk::Button::create();
+  button = Gtk::ToggleButton::create();
   button->add_css_class("flat");
   button->add_css_class("chat-list-item");
   button->connect_signal("clicked",
@@ -202,7 +201,7 @@ void ChatListItem::set_chat(const std::shared_ptr<td::td_api::chat> &chat) {
   }
 }
 void ChatListItem::set_username(String username) { this->username = username; }
-void ChatListItem::set_chat_id(std::int32_t chat_id) {
+void ChatListItem::set_chat_id(std::int64_t chat_id) {
   this->chat_id = chat_id;
 }
 void ChatListItem::set_order(std::int64_t order) { this->order = order; }
@@ -232,7 +231,7 @@ void ChatListItem::set_last_message(
     }
   }
 }
-RefPtr<Gtk::Button> ChatListItem::get_button() { return button; }
+RefPtr<Gtk::ToggleButton> ChatListItem::get_button() { return button; }
 // void ChatListItem::set_on_click(std::function<void()> on_click) {}
 RefPtr<Widgets::LastMessage> ChatListItem::get_last_message() {
   return last_message;
