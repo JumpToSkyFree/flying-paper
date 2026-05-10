@@ -218,8 +218,9 @@ String Chat::handle_user_status(
           GLib::strdup_printf("Last seen %s", date->format("%a %H:%M").c_str());
     } else if ((span / G_TIME_SPAN_HOUR) < 24) {
       status_str =
-          GLib::strdup_printf("Last seen %s", date->format("%a %H:%M").c_str());
+          GLib::strdup_printf("Last seen %s", date->format("%H:%M").c_str());
     }
+    break;
   }
   case td::td_api::userStatusEmpty::ID:
   default: {
