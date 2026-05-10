@@ -281,7 +281,7 @@ inline void Sidebar::init(Class *) {
                                                                 nullptr);
       });
 
-  scrolled_container->on_threshold_reached([]() {
+  scrolled_container->on_threshold_reached_end([]() {
     Telegram::ClientManagerAccessor::send(
         td::td_api::make_object<td::td_api::loadChats>(
             td::td_api::make_object<td::td_api::chatListMain>(), 30),

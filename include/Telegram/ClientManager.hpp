@@ -71,6 +71,10 @@ public:
     return std::shared_ptr<T>(static_cast<T *>(obj.release()));
   }
 
+  template <typename U, typename T> static T *cast_ptr(U *obj) {
+    return std::static_pointer_cast<T>(obj);
+  }
+
   void download_file(const td::td_api::object_ptr<td::td_api::file> &file,
                      std::int32_t priority,
                      std::function<void(const td::td_api::file &)> on_success,

@@ -1,6 +1,7 @@
 #ifndef FLYING_PAPER_APPLICATION_WINDOW_HPP
 #define FLYING_PAPER_APPLICATION_WINDOW_HPP
 
+#include "Views/ChatView.hpp"
 #include "peel/Adw/NavigationPage.h"
 #include "peel/Adw/NavigationSplitView.h"
 #include "peel/Adw/OverlaySplitView.h"
@@ -9,10 +10,12 @@
 #include "peel/Adw/ViewSwitcher.h"
 #include "peel/Gtk/Application.h"
 #include <cstdint>
+#include <memory>
 #include <peel/Adw/ApplicationWindow.h>
 #include <peel/GObject/Object.h>
 #include <peel/RefPtr.h>
 #include <peel/class.h>
+#include <unordered_map>
 
 using namespace peel;
 
@@ -26,6 +29,8 @@ class ApplicationWindow final : public Adw::ApplicationWindow {
   RefPtr<Adw::ToastOverlay> toast_overlay;
   void set_authenticated_content();
   void handle_authentication(std::int32_t object_id);
+  std::shared_ptr<std::unordered_map<std::int64_t, RefPtr<Views::Chat>>>
+      chats_cache;
 
   RefPtr<Adw::ViewStack> view_stack_unauthenticated_content;
   void set_unauthenticated_content();

@@ -36,7 +36,17 @@ void ScrolledContainer::set_threhshold(double threshold) {
   this->threshold = threshold;
 }
 double ScrolledContainer::get_threhshold() const { return threshold; }
-void ScrolledContainer::on_threshold_reached(std::function<void()> &&cb) {
+void ScrolledContainer::on_threshold_reached_start(std::function<void()> &&cb) {
+  auto adj = scrolled_window->get_vadjustment();
+  this->_on_treshold_reached = std::move(cb);
+  adj->connect_signal("value_changed", [adj, this](Gtk::Adjustment *) {
+    double current = adj->get_value();
+    if (current <= threshold) {
+      _on_treshold_reached();
+    }
+  });
+}
+void ScrolledContainer::on_threshold_reached_end(std::function<void()> &&cb) {
   auto adj = scrolled_window->get_vadjustment();
   this->_on_treshold_reached = std::move(cb);
   adj->connect_signal("value_changed", [adj, this](Gtk::Adjustment *) {

@@ -1,6 +1,7 @@
 #include "Telegram/ClientManager.hpp"
 #include "Views/PhoneNumberLoginView.hpp"
 #include "Views/SidebarView.hpp"
+#include "Widgets/ChatListItem.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/NavigationPage.h"
 #include "peel/Adw/NavigationSplitView.h"
@@ -12,6 +13,7 @@
 #include <Config/Config.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Telegram/Session.hpp>
+#include <Views/ChatView.hpp>
 #include <cstdint>
 #include <memory>
 #include <peel/Adw/Adw.h>
@@ -21,6 +23,7 @@
 #include <peel/RefPtr.h>
 #include <peel/class.h>
 #include <td/telegram/td_api.h>
+#include <unordered_map>
 #include <utility>
 
 namespace FlyingPaper {
@@ -68,6 +71,9 @@ void ApplicationWindow::set_authenticated_content() {
         session->set_context("me", user);
       });
 
+  chats_cache =
+      std::make_shared<std::unordered_map<std::int64_t, RefPtr<Views::Chat>>>();
+
   overlay_split_view = Adw::OverlaySplitView::create();
   overlay_split_view->set_min_sidebar_width(300);
   overlay_split_view->set_max_sidebar_width(350);
@@ -85,6 +91,26 @@ void ApplicationWindow::set_authenticated_content() {
   sidebar_page->set_visible(true);
   sidebar_page->set_child_visible(true);
   navigation_split_view->set_sidebar(sidebar_page);
+
+  sidebar->set_on_chat_item_selected([this](Widgets::ChatListItem *item) {
+    if (!chats_cache->contains(item->get_chat_id())) {
+      auto chat = Views::Chat::create(item->get_chat_id());
+      // TODO: Create a profile page and set it.
+      // chat->on_header_bar_clicked([this, item]() {
+      //   auto id = item->get_chat_id();
+      //   navigation_split_view->set_content(nullptr);
+      // });
+      chat->set_child_id(item->get_chat_id());
+      chats_cache->emplace(item->get_chat_id(), std::move(chat));
+    }
+    auto chat = chats_cache->find(item->get_chat_id());
+    if (chat != chats_cache->end()) {
+      if (chat->second) {
+        auto page = Adw::NavigationPage::create(chat->second, "");
+        navigation_split_view->set_content(page);
+      }
+    }
+  });
 
   overlay_split_view->set_content(this->navigation_split_view);
   set_content(overlay_split_view);

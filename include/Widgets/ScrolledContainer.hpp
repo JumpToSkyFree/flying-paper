@@ -25,7 +25,8 @@ public:
   void set_threhshold(double threshold);
   double get_threhshold() const;
 
-  void on_threshold_reached(std::function<void()> &&threshold);
+  void on_threshold_reached_start(std::function<void()> &&threshold);
+  void on_threshold_reached_end(std::function<void()> &&threshold);
 };
 } // namespace FlyingPaper::Widgets
 
