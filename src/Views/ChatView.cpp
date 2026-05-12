@@ -1,18 +1,24 @@
 #include "Telegram/ClientManager.hpp"
+#include "Widgets/ScrolledContainer.hpp"
 #include "glib.h"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/NavigationPage.h"
 #include "peel/Adw/ToolbarView.h"
 #include "peel/GLib/DateTime.h"
 #include "peel/GLib/functions.h"
+#include "peel/Gtk/Adjustment.h"
 #include "peel/Gtk/Align.h"
 #include "peel/Gtk/BinLayout.h"
 #include "peel/Gtk/Box.h"
+#include "peel/Gtk/Button.h"
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Orientation.h"
+#include "peel/Gtk/ScrolledWindow.h"
+#include "peel/Gtk/Widget.h"
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Views/ChatView.hpp>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <peel/FloatPtr.h>
@@ -81,8 +87,118 @@ void Chat::make_header_bar() {
   header_bar->pack_start(std::move(box));
 }
 void Chat::set_chat_content() {
-  auto label = Gtk::Label::create(std::to_string(chat_id).c_str());
-  toolbar_view->set_content(std::move(label));
+  chat_messages_container = Gtk::Box::create(Gtk::Orientation::VERTICAL, 16);
+
+  if (this->toolbar_view) {
+    scrolled_container = Widgets::ScrolledContainer::create(); // fix typo too
+    scrolled_container->on_threshold_reached_start(
+        [this]() { fetch_n_messages(std::make_shared<std::int32_t>(20)); });
+    auto scrolled_window = scrolled_container->get_scrolled_window();
+    scrolled_window->set_child(chat_messages_container);
+    toolbar_view->set_content(scrolled_container);
+
+    // FIX: Scroll is at the bottom but top elements are shown.
+    std::shared_ptr<std::int32_t> left_messages =
+        std::make_shared<std::int32_t>(20);
+    fetch_messages();
+  }
+}
+void Chat::fetch_n_messages(std::shared_ptr<std::int32_t> left_messages) {
+  if (!(*left_messages))
+    return;
+  Telegram::ClientManagerAccessor::send(
+      td::td_api::make_object<td::td_api::getChatHistory>(
+          this->chat_id, from_message_id, 0, 100, false),
+      [this, left_messages](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<td::td_api::messages>(
+            obj,
+            [this, left_messages](
+                const std::shared_ptr<td::td_api::messages> &messages) {
+              if (!messages->messages_.empty() && messages->messages_.back()) {
+                from_message_id = messages->messages_.back()->id_;
+                for (std::size_t i = 0;
+                     i < messages->messages_.size() && (*left_messages); i++) {
+                  auto message = std::move(messages->messages_[i]);
+                  auto _message_content = Telegram::ClientManager::cast_ptr<
+                      td::td_api::MessageContent, td::td_api::MessageContent>(
+                      std::move(message->content_));
+                  Telegram::ClientManagerAccessor::handle<
+                      td::td_api::MessageContent, td::td_api::messageText>(
+                      _message_content,
+                      [this, left_messages](
+                          const std::shared_ptr<td::td_api::messageText>
+                              &message) {
+                        GLib::idle_add([this, message]() {
+                          auto label =
+                              Gtk::Label::create(message->text_->text_.c_str());
+                          label->set_width_chars(128);
+                          chat_messages_container->prepend(std::move(label));
+                          return G_SOURCE_REMOVE;
+                        });
+                        *left_messages -= 1;
+                      },
+                      nullptr);
+                }
+                fetch_n_messages(left_messages);
+              }
+            },
+            [](const std::shared_ptr<td::td_api::error> &error) {
+              // TODO: Show an error if there is a problem with fetching
+              // messages.
+            });
+      });
+}
+void Chat::fetch_messages() {
+  Telegram::ClientManagerAccessor::send(
+      td::td_api::make_object<td::td_api::getChatHistory>(
+          this->chat_id, from_message_id, 0, 100, false),
+      [this](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<td::td_api::messages>(
+            obj,
+            [this](const std::shared_ptr<td::td_api::messages> &messages) {
+              auto scrolled_window = scrolled_container->get_scrolled_window();
+              auto adj = scrolled_window->get_vadjustment();
+              double upper = adj->get_upper();
+              double page_size = adj->get_page_size();
+              if (!messages->messages_.empty() && messages->messages_.back()) {
+                from_message_id = messages->messages_.back()->id_;
+                for (std::size_t i = 0;
+                     i < messages->messages_.size() && !(upper > page_size);
+                     i++) {
+                  auto message = std::move(messages->messages_[i]);
+                  auto _message_content = Telegram::ClientManager::cast_ptr<
+                      td::td_api::MessageContent, td::td_api::MessageContent>(
+                      std::move(message->content_));
+                  Telegram::ClientManagerAccessor::handle<
+                      td::td_api::MessageContent, td::td_api::messageText>(
+                      _message_content,
+                      [this](const std::shared_ptr<td::td_api::messageText>
+                                 &message) {
+                        GLib::idle_add([this, message]() {
+                          auto label =
+                              Gtk::Label::create(message->text_->text_.c_str());
+                          label->set_width_chars(128);
+                          chat_messages_container->prepend(std::move(label));
+                          return G_SOURCE_REMOVE;
+                        });
+                      },
+                      nullptr);
+                }
+                if (!(upper > page_size)) {
+                  fetch_messages();
+                } else {
+                  auto scrolled_window =
+                      scrolled_container->get_scrolled_window();
+                  auto adj = scrolled_window->get_vadjustment();
+                  adj->set_value(adj->get_upper() - adj->get_page_size());
+                }
+              }
+            },
+            [](const std::shared_ptr<td::td_api::error> &error) {
+              // TODO: Show an error if there is a problem with fetching
+              // messages.
+            });
+      });
 }
 void Chat::set_header_bar() {
   Telegram::ClientManagerAccessor::send(
@@ -236,7 +352,5 @@ void Chat::set_child_id(std::int64_t chat_id) {
   set_chat_content();
 }
 std::int64_t Chat::get_child_id() const { return this->chat_id; }
-RefPtr<Chat> Chat::create(std::int64_t chat_id) {
-  return Object::create<Chat>(prop_chat_id(), chat_id);
-}
+RefPtr<Chat> Chat::create() { return Object::create<Chat>(); }
 } // namespace FlyingPaper::Views

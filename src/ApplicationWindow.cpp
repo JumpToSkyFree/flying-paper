@@ -94,7 +94,7 @@ void ApplicationWindow::set_authenticated_content() {
 
   sidebar->set_on_chat_item_selected([this](Widgets::ChatListItem *item) {
     if (!chats_cache->contains(item->get_chat_id())) {
-      auto chat = Views::Chat::create(item->get_chat_id());
+      auto chat = Views::Chat::create();
       // TODO: Create a profile page and set it.
       // chat->on_header_bar_clicked([this, item]() {
       //   auto id = item->get_chat_id();
