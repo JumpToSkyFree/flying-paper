@@ -21,3 +21,21 @@ button.rounded {
   border-radius: 9px; /* Force a circle */
 }
 
+.message-label {
+  background: transparent;
+  background-color: transparent;
+}
+
+.bubble {
+  background-color: var(--sidebar-bg-color, @theme_bg_color);
+  max-width: 400px;
+  min-width: 200px;
+  padding: 8px;
+  border-radius: 8px; /* Force a circle */
+}
+.bubble.ingoing {
+  margin-left: 4px;
+}
+.bubble.outgoing {
+  margin-right: 4px;
+}

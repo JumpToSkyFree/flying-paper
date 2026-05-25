@@ -1,6 +1,7 @@
 #ifndef FLYING_PAPER_CHAT_VIEW_HPP
 #define FLYING_PAPER_CHAT_VIEW_HPP
 
+#include "Widgets/ChatMessage.hpp"
 #include "Widgets/ScrolledContainer.hpp"
 #include "peel/Adw/HeaderBar.h"
 #include "peel/Adw/NavigationPage.h"
@@ -34,7 +35,11 @@ private:
   std::int64_t chat_id;
   std::int64_t user_id;
   std::uint64_t update_user_status_sub{0};
+  std::uint64_t update_new_message{0};
   std::int64_t from_message_id{0};
+  std::shared_ptr<td::td_api::ChatType> chat_type;
+  std::vector<Widgets::ChatMessage *> unread_messages;
+  bool is_group{false};
   RefPtr<Adw::ToolbarView> toolbar_view;
   RefPtr<Adw::NavigationPage> chat_page;
   RefPtr<Adw::NavigationPage> profile_page;

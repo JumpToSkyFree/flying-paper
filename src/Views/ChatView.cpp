@@ -1,4 +1,5 @@
 #include "Telegram/ClientManager.hpp"
+#include "Widgets/ChatMessage.hpp"
 #include "Widgets/ScrolledContainer.hpp"
 #include "glib.h"
 #include "peel/Adw/HeaderBar.h"
@@ -23,12 +24,15 @@
 #include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Type.h>
+#include <peel/Gdk/Rectangle.h>
 #include <peel/RefPtr.h>
 #include <peel/String.h>
 #include <peel/class.h>
 #include <string>
 #include <td/telegram/td_api.h>
 #include <td/tl/TlObject.h>
+#include <utility>
+#include <vector>
 
 namespace FlyingPaper::Views {
 PEEL_CLASS_IMPL(Chat, "FlyingPaperChat", Gtk::Widget)
@@ -61,6 +65,29 @@ inline void Chat::init(Class *) {
             },
             nullptr);
       });
+
+  update_new_message = Telegram::ClientManagerAccessor::subscribe(
+      td::td_api::updateNewMessage::ID,
+      [this](const Telegram::ClientManager::SharedObject &obj) {
+        Telegram::ClientManagerAccessor::handle<td::td_api::updateNewMessage>(
+            obj,
+            [this](const std::shared_ptr<td::td_api::updateNewMessage>
+                       &new_message) {
+              // FIX: new_message is being destroyed out of this scop, data that
+              // is passed to Widgets::ChatMessage is corrupted.
+              RefPtr<Widgets::ChatMessage> chat_message =
+                  Widgets::ChatMessage::create();
+              chat_message->set_is_group(is_group);
+              chat_message->set_message_content(
+                  &*new_message->message_, &*new_message->message_->content_);
+              if (!new_message->message_->is_outgoing_) {
+                unread_messages.push_back(chat_message);
+              }
+              chat_messages_container->append(chat_message);
+            },
+            nullptr);
+      });
+
   set_parent(std::move(chat_page));
 }
 inline void Chat::vfunc_dispose() {
@@ -87,19 +114,42 @@ void Chat::make_header_bar() {
   header_bar->pack_start(std::move(box));
 }
 void Chat::set_chat_content() {
-  chat_messages_container = Gtk::Box::create(Gtk::Orientation::VERTICAL, 16);
+  chat_messages_container = Gtk::Box::create(Gtk::Orientation::VERTICAL, 8);
 
   if (this->toolbar_view) {
-    scrolled_container = Widgets::ScrolledContainer::create(); // fix typo too
+    scrolled_container = Widgets::ScrolledContainer::create();
     scrolled_container->on_threshold_reached_start(
         [this]() { fetch_n_messages(std::make_shared<std::int32_t>(20)); });
     auto scrolled_window = scrolled_container->get_scrolled_window();
     scrolled_window->set_child(chat_messages_container);
     toolbar_view->set_content(scrolled_container);
 
-    // FIX: Scroll is at the bottom but top elements are shown.
-    std::shared_ptr<std::int32_t> left_messages =
-        std::make_shared<std::int32_t>(20);
+    auto vadjustment = scrolled_window->get_vadjustment();
+    vadjustment->connect_signal("value-changed", [this, scrolled_window](
+                                                     Gtk::Adjustment *) {
+      gdouble x, y;
+      std::vector<std::int64_t> active_read_messages;
+      for (auto &chat_message : unread_messages) {
+        chat_message->translate_coordinates(scrolled_window, 0, 0, &x, &y);
+        gint chat_message_height = chat_message->get_allocated_height();
+        gint scroll_height = scrolled_window->get_allocated_height();
+        if (y + (chat_message_height - 8) >= 0 && y <= scroll_height) {
+          std::erase(unread_messages, chat_message);
+          active_read_messages.push_back(chat_message->get_id());
+        }
+      }
+      Telegram::ClientManagerAccessor::send(
+          td::td_api::make_object<td::td_api::viewMessages>(
+              this->chat_id, std::move(active_read_messages), nullptr, true),
+          [](const Telegram::ClientManager::SharedObject &obj) {
+            Telegram::ClientManagerAccessor::handle<td::td_api::ok>(
+                obj, nullptr,
+                [](const std::shared_ptr<td::td_api::error> &error) {
+                  g_print("%s\n", error->message_.c_str());
+                });
+          });
+    });
+
     fetch_messages();
   }
 }
@@ -122,22 +172,12 @@ void Chat::fetch_n_messages(std::shared_ptr<std::int32_t> left_messages) {
                   auto _message_content = Telegram::ClientManager::cast_ptr<
                       td::td_api::MessageContent, td::td_api::MessageContent>(
                       std::move(message->content_));
-                  Telegram::ClientManagerAccessor::handle<
-                      td::td_api::MessageContent, td::td_api::messageText>(
-                      _message_content,
-                      [this, left_messages](
-                          const std::shared_ptr<td::td_api::messageText>
-                              &message) {
-                        GLib::idle_add([this, message]() {
-                          auto label =
-                              Gtk::Label::create(message->text_->text_.c_str());
-                          label->set_width_chars(128);
-                          chat_messages_container->prepend(std::move(label));
-                          return G_SOURCE_REMOVE;
-                        });
-                        *left_messages -= 1;
-                      },
-                      nullptr);
+                  auto chat_message = Widgets::ChatMessage::create();
+                  chat_message->set_is_group(is_group);
+                  chat_message->set_message_content(&*message,
+                                                    &*_message_content);
+                  chat_messages_container->prepend(std::move(chat_message));
+                  *left_messages -= 1;
                 }
                 fetch_n_messages(left_messages);
               }
@@ -169,20 +209,13 @@ void Chat::fetch_messages() {
                   auto _message_content = Telegram::ClientManager::cast_ptr<
                       td::td_api::MessageContent, td::td_api::MessageContent>(
                       std::move(message->content_));
-                  Telegram::ClientManagerAccessor::handle<
-                      td::td_api::MessageContent, td::td_api::messageText>(
-                      _message_content,
-                      [this](const std::shared_ptr<td::td_api::messageText>
-                                 &message) {
-                        GLib::idle_add([this, message]() {
-                          auto label =
-                              Gtk::Label::create(message->text_->text_.c_str());
-                          label->set_width_chars(128);
-                          chat_messages_container->prepend(std::move(label));
-                          return G_SOURCE_REMOVE;
-                        });
-                      },
-                      nullptr);
+                  auto chat_message = Widgets::ChatMessage::create();
+                  chat_message->set_is_group(is_group);
+                  chat_message->set_message_content(&*message,
+                                                    &*_message_content);
+                  chat_messages_container->prepend(std::move(chat_message));
+                  // TODO: Set the profile picture of the chat on the left of
+                  // the message.
                 }
                 if (!(upper > page_size)) {
                   fetch_messages();
@@ -191,6 +224,7 @@ void Chat::fetch_messages() {
                       scrolled_container->get_scrolled_window();
                   auto adj = scrolled_window->get_vadjustment();
                   adj->set_value(adj->get_upper() - adj->get_page_size());
+                  return;
                 }
               }
             },
@@ -210,7 +244,7 @@ void Chat::set_header_bar() {
               std::string title = chat->title_;
               String markup = GLib::strdup_printf("<b>%s</b>", title.c_str());
               chat_title->set_markup(markup);
-              const auto &chat_type =
+              chat_type =
                   Telegram::ClientManager::cast_ptr<td::td_api::ChatType,
                                                     td::td_api::ChatType>(
                       std::move(chat->type_));
@@ -242,7 +276,6 @@ void Chat::set_header_bar() {
                   chat_type,
                   [this](const std::shared_ptr<td::td_api::chatTypeBasicGroup>
                              &basic_group) {
-                    // basic_group->ID
                     Telegram::ClientManagerAccessor::send(
                         td::td_api::make_object<
                             td::td_api::getBasicGroupFullInfo>(
@@ -266,7 +299,6 @@ void Chat::set_header_bar() {
                   chat_type,
                   [this](const std::shared_ptr<td::td_api::chatTypeSupergroup>
                              &supergroup) {
-                    // basic_group->ID
                     Telegram::ClientManagerAccessor::send(
                         td::td_api::make_object<
                             td::td_api::getSupergroupFullInfo>(
@@ -286,6 +318,7 @@ void Chat::set_header_bar() {
                             String count_str = GLib::strdup_printf(
                                 "<span alpha='50%%'>%'d Members</span>", count);
                             bottom_label->set_markup(count_str.c_str());
+                            is_group = true;
                           }
                         });
                   },
