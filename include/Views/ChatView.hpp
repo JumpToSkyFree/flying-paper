@@ -10,6 +10,7 @@
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Label.h"
 #include "peel/Gtk/Widget.h"
+#include <Widgets/ChatMessageInput.hpp>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -49,6 +50,7 @@ private:
   RefPtr<Adw::NavigationView> navigation_view;
   RefPtr<Gtk::Box> chat_messages_container;
   RefPtr<Widgets::ScrolledContainer> scrolled_container;
+  RefPtr<Widgets::MessageInput> message_input;
 
   inline void init(Class *);
   inline void vfunc_dispose();

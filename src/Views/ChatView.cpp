@@ -1,5 +1,6 @@
 #include "Telegram/ClientManager.hpp"
 #include "Widgets/ChatMessage.hpp"
+#include "Widgets/ChatMessageInput.hpp"
 #include "Widgets/ScrolledContainer.hpp"
 #include "glib.h"
 #include "peel/Adw/HeaderBar.h"
@@ -43,8 +44,10 @@ void Chat::Class::init() {
 inline void Chat::init(Class *) {
   navigation_view = Adw::NavigationView::create();
   toolbar_view = Adw::ToolbarView::create();
+  message_input = Widgets::MessageInput::create();
   make_header_bar();
   toolbar_view->add_top_bar(header_bar);
+  toolbar_view->add_bottom_bar(message_input);
   FloatPtr<Adw::NavigationPage> chat_page =
       Adw::NavigationPage::create(toolbar_view, "");
   update_user_status_sub = Telegram::ClientManagerAccessor::subscribe(
@@ -381,6 +384,7 @@ String Chat::handle_user_status(
 }
 void Chat::set_child_id(std::int64_t chat_id) {
   this->chat_id = chat_id;
+  message_input->set_chat_id(chat_id);
   set_header_bar();
   set_chat_content();
 }

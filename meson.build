@@ -47,7 +47,8 @@ flying_paper_headers = files([
   './include/Widgets/LastMessage.hpp',
   './include/Widgets/ScrolledContainer.hpp',
   './include/Views/ChatView.hpp',
-  './include/Widgets/ChatMessage.hpp'
+  './include/Widgets/ChatMessage.hpp',
+  './include/Widgets/ChatMessageInput.hpp'
   ])
 
 flying_paper_sources = files([
@@ -64,7 +65,8 @@ flying_paper_sources = files([
   './src/Widgets/LastMessage.cpp',
   './src/Widgets/ScrolledContainer.cpp',
   './src/Views/ChatView.cpp',
-  './src/Widgets/ChatMessage.cpp'
+  './src/Widgets/ChatMessage.cpp',
+  './src/Widgets/ChatMessageInput.cpp'
   ])
 
 dependencies = [
