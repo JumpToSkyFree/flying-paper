@@ -40,5 +40,4 @@
 # debug information files
 *.dwo
 
-include/Config/
 include/Config/Config.hpp

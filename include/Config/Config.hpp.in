@@ -1,0 +1,7 @@
+#pragma once
+#include <cstdint>
+#include <string>
+namespace FlyingPaper::Config {
+inline std::int32_t app_id = @TELEGRAM_APP_ID@;
+inline std::string app_hash = "@TELEGRAM_APP_HASH@";
+}

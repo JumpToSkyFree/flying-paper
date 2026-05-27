@@ -10,7 +10,6 @@
 #include "peel/Adw/ViewStack.h"
 #include "peel/Adw/ViewSwitcherBar.h"
 #include <ApplicationWindow.hpp>
-#include <Config/Config.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <Telegram/Session.hpp>
 #include <Views/ChatView.hpp>
@@ -35,6 +34,7 @@ inline void ApplicationWindow::init(Class *) {
   set_title("Flying Paper");
   set_default_size(1000, 750);
   add_css_class("devel");
+
   setup();
 }
 void ApplicationWindow::handle_authentication(std::int32_t object_id) {
@@ -84,6 +84,21 @@ void ApplicationWindow::set_authenticated_content() {
   navigation_split_view = Adw::NavigationSplitView::create();
   navigation_split_view->set_min_sidebar_width(300);
   navigation_split_view->set_max_sidebar_width(400);
+
+  this->connect_notify(Gtk::Window::prop_is_active(),
+      [this](GObject::Object *, GObject::ParamSpec *) {
+    Telegram::ClientManagerAccessor::send(
+        td::td_api::make_object<td::td_api::setOption>(
+            "online", td::td_api::make_object<td::td_api::optionValueBoolean>(
+                          this->is_active())),
+        [](const Telegram::ClientManager::SharedObject &obj) {
+          Telegram::ClientManagerAccessor::handle<td::td_api::ok>(
+              obj, nullptr,
+              [](const std::shared_ptr<td::td_api::error> &error) {
+                g_print("%s\n", error->message_.c_str());
+              });
+        });
+  });
 
   FloatPtr<Views::Sidebar> sidebar = Views::Sidebar::create();
   sidebar_page = Adw::NavigationPage::create(sidebar, "Flying Paper");

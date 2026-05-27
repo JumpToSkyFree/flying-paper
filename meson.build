@@ -7,6 +7,27 @@ project('flying-paper', 'cpp', default_options : [
 
 cc = meson.get_compiler('cpp')
 
+config_data = configuration_data()
+
+app_id = get_option('telegram_app_id')
+if app_id == ''
+  error('telegram_app_id not set. Pass -Dtelegram_app_id=XXX to meson setup')
+endif
+
+app_hash = get_option('telegram_app_hash')
+if app_hash == ''
+  error('telegram_app_hash not set. Pass -Dtelegram_app_hash=XXX to meson setup')
+endif
+
+config_data.set('TELEGRAM_APP_ID', app_id)
+config_data.set('TELEGRAM_APP_HASH', app_hash)
+
+configure_file(
+  input: 'include/Config/Config.hpp.in',
+  output: 'Config.hpp',
+  configuration: config_data,
+)
+
 gnome = import('gnome')
 
 gtk = dependency('gtk4')

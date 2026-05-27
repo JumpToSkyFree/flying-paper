@@ -1,0 +1,4 @@
+option('telegram_app_id', type: 'string', value: '',
+       description: 'Telegram API ID from my.telegram.org')
+option('telegram_app_hash', type: 'string', value: '',
+       description: 'Telegram API hash from my.telegram.org')
