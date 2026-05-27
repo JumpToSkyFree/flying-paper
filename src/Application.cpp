@@ -12,7 +12,7 @@
 #include "peel/Gtk/StyleContext.h"
 #include "peel/Gtk/Window.h"
 #include <Application.hpp>
-#include <Config/Config.hpp>
+#include <Config.hpp>
 #include <Telegram/ClientManager.hpp>
 #include <Telegram/Internal/ClientManagerAccessor.hpp>
 #include <peel/FloatPtr.h>
