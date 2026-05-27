@@ -7,6 +7,8 @@ project('flying-paper', 'cpp', default_options : [
 
 cc = meson.get_compiler('cpp')
 
+gnome = import('gnome')
+
 gtk = dependency('gtk4')
 peel = dependency('peel')
 libadwaita = dependency('libadwaita-1', version : '>= 1.5', required : true)
@@ -69,6 +71,8 @@ flying_paper_sources = files([
   './src/Widgets/ChatMessageInput.cpp'
   ])
 
+resources = gnome.compile_resources('flying-paper-resources', 'data/flying-paper.gresource.xml', source_dir: 'data')
+
 dependencies = [
   libadwaita,
   gtk,
@@ -96,6 +100,7 @@ executable('flying-paper',
   flying_paper_headers,
   flying_paper_sources,
   peel_headers,
+  resources,
   include_directories : incdir,
   dependencies : dependencies
 )

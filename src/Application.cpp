@@ -36,10 +36,9 @@ void Application::Class::init() {
 }
 inline void Application::vfunc_startup() {
   parent_vfunc_startup<Application>();
-  RefPtr<Gio::File> css_file =
-      Gio::File::create_for_path("../styles/style.css");
   RefPtr<Gtk::CssProvider> css_provider = Gtk::CssProvider::create();
-  css_provider->load_from_file(css_file);
+  css_provider->load_from_resource(
+      "/org/jumptoskyfree/flyingpaper/styles/style.css");
 
   auto display = Gdk::Display::get_default();
   Gtk::StyleContext::add_provider_for_display(display, css_provider,
