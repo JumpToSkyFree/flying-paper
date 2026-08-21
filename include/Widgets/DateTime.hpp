@@ -25,6 +25,7 @@ class DateTime final : public Gtk::Widget {
   inline void init(Class *);
 
   std::int32_t timestamp{0};
+  bool has_timestamp{false};
   String format;
   RefPtr<Gtk::Label> datetime_label;
 

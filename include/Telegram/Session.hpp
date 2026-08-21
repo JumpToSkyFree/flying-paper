@@ -109,6 +109,11 @@ public:
                              [id](const auto &p) { return p.first == id; }),
               vec.end());
   }
+  void remove_context(const std::string &name) {
+    std::lock_guard<std::mutex> lock(registry_mtx);
+    contexts.erase(name);
+    pending_requests.erase(name);
+  }
 };
 } // namespace FlyingPaper::Session
 

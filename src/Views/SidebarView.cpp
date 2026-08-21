@@ -33,6 +33,7 @@
 #include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/RefPtr.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <peel/signal.h>
 #include <string>
@@ -46,24 +47,32 @@ inline void Sidebar::Class::init() {
   override_vfunc_dispose<Sidebar>();
 }
 inline void Sidebar::vfunc_dispose() {
-  parent_vfunc_dispose<Sidebar>();
   if (container) {
     container->unparent();
     container = nullptr;
   }
-  // FIX: Make sure to remove sidebar-toast-overlay from session context.
-  if (update_new_chat_subscription) {
+  if (update_new_chat_subscription != 0) {
     Telegram::ClientManagerAccessor::unsubscribe(
         td::td_api::updateNewMessage::ID, update_new_chat_subscription);
+    update_new_chat_subscription = 0;
   }
-  if (update_chat_position) {
+  if (update_chat_position != 0) {
     Telegram::ClientManagerAccessor::unsubscribe(
         td::td_api::updateChatPosition::ID, update_chat_position);
+    update_chat_position = 0;
   }
-  if (update_new_chat) {
+  if (update_new_chat != 0) {
+    Telegram::ClientManagerAccessor::unsubscribe(td::td_api::updateNewChat::ID,
+                                                 update_new_chat);
+    update_new_chat = 0;
+  }
+  if (update_chat_last_message != 0) {
     Telegram::ClientManagerAccessor::unsubscribe(
-        td::td_api::updateChatPosition::ID, update_new_chat);
+        td::td_api::updateChatLastMessage::ID, update_chat_last_message);
+    update_chat_last_message = 0;
   }
+  Session::Session::get()->remove_context("sidebar-toast-overlay");
+  parent_vfunc_dispose<Sidebar>();
 }
 void Sidebar::make_profile_avatar() {
   avatar = Widgets::Avatar::create_from_text(true, "My Name", 32);
@@ -89,32 +98,43 @@ FloatPtr<Adw::HeaderBar> Sidebar::make_header_bar() {
   FloatPtr<Adw::HeaderBar> header_bar = Adw::HeaderBar::create();
   make_profile_avatar();
   auto session = Session::Session::get();
+  peel::WeakPtr<Sidebar> self_weak(this);
   session->request_context<td::td_api::user>(
-      "me", [this](std::shared_ptr<void> data) {
+      "me", [self_weak](std::shared_ptr<void> data) {
+        if (!self_weak)
+          return;
+        Sidebar *self = self_weak;
         const auto &user = Session::Session::cast<td::td_api::user>(data);
         Telegram::ClientManagerAccessor::handle<td::td_api::user>(
             user,
-            [this](const std::shared_ptr<td::td_api::user> &user) {
-              set_avatar_fullname(*user);
+            [self](const std::shared_ptr<td::td_api::user> &user) {
+              self->set_avatar_fullname(*user);
               if (user->profile_photo_) {
                 auto session = Session::Session::get();
                 auto client = session->get_client();
+                peel::WeakPtr<Sidebar> owner(self);
                 client->download_file(
                     user->profile_photo_->small_, 1,
-                    [this](const td::td_api::file &file) {
-                      set_avatar_image(file);
+                    [owner](const td::td_api::file &file) {
+                      if (!owner)
+                        return;
+                      Sidebar *sidebar = owner;
+                      sidebar->set_avatar_image(file);
                     },
-                    [this](const td::td_api::error &error) {
+                    [owner](const td::td_api::error &error) {
+                      if (!owner)
+                        return;
+                      Sidebar *sidebar = owner;
                       RefPtr<Adw::Toast> toast =
                           Adw::Toast::create(error.message_.c_str());
-                      toast_overlay->add_toast(toast);
+                      sidebar->toast_overlay->add_toast(toast);
                     });
               }
             },
-            [this](const std::shared_ptr<td::td_api::error> &error) {
+            [self](const std::shared_ptr<td::td_api::error> &error) {
               RefPtr<Adw::Toast> toast =
                   Adw::Toast::create(error->message_.c_str());
-              toast_overlay->add_toast(toast);
+              self->toast_overlay->add_toast(toast);
             });
       });
   header_bar->add_css_class("flat");
@@ -217,7 +237,7 @@ inline void Sidebar::init(Class *) {
         }
       });
 
-  Telegram::ClientManagerAccessor::subscribe(
+  update_chat_last_message = Telegram::ClientManagerAccessor::subscribe(
       td::td_api::updateChatLastMessage::ID,
       [this](const Telegram::ClientManager::SharedObject &obj) {
         Telegram::ClientManagerAccessor::handle<

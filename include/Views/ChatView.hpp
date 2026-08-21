@@ -15,7 +15,9 @@
 #include <functional>
 #include <memory>
 #include <peel/FloatPtr.h>
+#include <peel/GObject/Object.h>
 #include <peel/RefPtr.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <peel/property.h>
 #include <td/telegram/td_api.h>
@@ -33,11 +35,12 @@ private:
         .set(&Chat::set_child_id);
   }
 
-  std::int64_t chat_id;
-  std::int64_t user_id;
+  std::int64_t chat_id{0};
+  std::int64_t user_id{0};
   std::uint64_t update_user_status_sub{0};
   std::uint64_t update_new_message{0};
   std::int64_t from_message_id{0};
+  peel::SignalConnection scroll_connection;
   std::shared_ptr<td::td_api::ChatType> chat_type;
   std::vector<Widgets::ChatMessage *> unread_messages;
   bool is_group{false};
@@ -61,7 +64,7 @@ private:
   void set_header_bar();
   void set_chat_content();
   void fetch_n_messages(std::shared_ptr<std::int32_t> left_messages_ptr);
-  void fetch_messages();
+  void fetch_messages(std::shared_ptr<std::int32_t> loaded_messages);
 
   PEEL_PROPERTY(std::int64_t, chat_id, "chat-id");
 

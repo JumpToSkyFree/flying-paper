@@ -27,6 +27,7 @@ class ApplicationWindow final : public Adw::ApplicationWindow {
   RefPtr<Adw::OverlaySplitView> overlay_split_view;
   RefPtr<Adw::NavigationSplitView> navigation_split_view;
   RefPtr<Adw::ToastOverlay> toast_overlay;
+  peel::SignalConnection active_state_connection;
   void set_authenticated_content();
   void handle_authentication(std::int32_t object_id);
   std::shared_ptr<std::unordered_map<std::int64_t, RefPtr<Views::Chat>>>
@@ -36,6 +37,9 @@ class ApplicationWindow final : public Adw::ApplicationWindow {
   void set_unauthenticated_content();
 
   RefPtr<Adw::NavigationPage> sidebar_page;
+
+  inline void init(Class *);
+  inline void vfunc_dispose();
 
 public:
   static ApplicationWindow *create(Gtk::Application *app);

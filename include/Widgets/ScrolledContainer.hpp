@@ -1,9 +1,12 @@
 #ifndef FLYING_PAPER_SCROLLED_CONTAINER_HPP
+
 #define FLYING_PAPER_SCROLLED_CONTAINER_HPP
 
 #include <functional>
 #include <peel/Gtk/ScrolledWindow.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
+#include <peel/signal.h>
 
 namespace FlyingPaper::Widgets {
 class ScrolledContainer : public peel::Gtk::Widget {
@@ -14,7 +17,10 @@ class ScrolledContainer : public peel::Gtk::Widget {
   peel::RefPtr<peel::Gtk::ScrolledWindow> scrolled_window;
 
   double threshold{10.0};
-  std::function<void()> _on_treshold_reached;
+  std::function<void()> on_threshold_start;
+  std::function<void()> on_threshold_end;
+  peel::SignalConnection start_connection;
+  peel::SignalConnection end_connection;
 
 public:
   static peel::RefPtr<ScrolledContainer> create();

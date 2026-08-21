@@ -53,10 +53,15 @@ struct ClientManager::ClientManagerPrivate {
 
   ~ClientManagerPrivate() { stop_loop(); }
   void send(Request request, Callback callback) {
-    std::uint64_t id = ++this->query_id_counter;
+    if (!this->client_manager)
+      return;
+    std::uint64_t id;
     if (callback) {
       std::lock_guard<std::mutex> lock(handlers_mtx);
+      id = ++this->query_id_counter;
       this->handlers.emplace(id, std::move(callback));
+    } else {
+      id = ++this->query_id_counter;
     }
     this->client_manager->send(this->client_id, id, std::move(request));
   }
@@ -79,9 +84,9 @@ struct ClientManager::ClientManagerPrivate {
   }
   void loop() {
     is_running.store(true);
-    while (this->keep_running.load()) {
+    while (this->keep_running.load() && this->client_manager) {
       td::ClientManager::Response response =
-          this->client_manager->receive(10.0);
+          this->client_manager->receive(1.0);
       if (!response.object)
         continue;
 
@@ -133,24 +138,24 @@ struct ClientManager::ClientManagerPrivate {
     is_running.store(false);
   }
   void start_loop() {
-    if (is_running.load() || loop_thread.joinable())
+    if (is_running.load() || loop_thread.joinable() || !client_manager)
       return;
+    keep_running.store(true);
     is_running.store(true);
     loop_thread = std::thread([this]() { this->loop(); });
     pthread_setname_np(loop_thread.native_handle(),
                        "FlyingPaperTDLibLoopThread");
   }
   void stop_loop() {
-    if (is_running.load()) {
+    if (!is_running.load())
+      return;
+    if (this->client_manager)
       send(td::td_api::make_object<td::td_api::close>(), {});
-      this->keep_running.store(false);
-      if (loop_thread.joinable())
-        loop_thread.join();
-      client_manager.reset();
-      is_running.store(false);
-      initial_update_authorization_state = 0;
-      query_id_counter = 1;
-    }
+    this->keep_running.store(false);
+    if (loop_thread.joinable())
+      loop_thread.join();
+    client_manager.reset();
+    is_running.store(false);
   }
   void update_authorization_state(const SharedObject &obj) {
     const auto &update =

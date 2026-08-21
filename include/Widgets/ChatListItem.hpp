@@ -29,7 +29,7 @@ class ChatListItem final : public Gtk::Widget {
   inline void init(Class *);
   inline void vfunc_dispose();
 
-  Gtk::Box *container;
+  Gtk::Box *container{nullptr};
   RefPtr<Widgets::Avatar> avatar;
 
   RefPtr<Adw::ToastOverlay> sidebar_toast_overlay;
@@ -51,11 +51,11 @@ class ChatListItem final : public Gtk::Widget {
                                                FloatPtr<Gtk::Widget> right);
 
   String chat_title;
-  std::int32_t timestamp;
+  std::int32_t timestamp{0};
   FloatPtr<Gtk::Widget> chat_content;
   String username;
-  std::int64_t chat_id;
-  std::int64_t order;
+  std::int64_t chat_id{0};
+  std::int64_t order{0};
 
   static Signal<ChatListItem, void(void)> sig_on_click;
   PEEL_SIGNAL_CONNECT_METHOD(chat_list_item_clicked, sig_on_click);

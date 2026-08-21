@@ -28,7 +28,7 @@ inline void DateTime::vfunc_dispose() {
 }
 inline void DateTime::init(Class *) {
   datetime_label = Gtk::Label::create("");
-  if (format) {
+  if (format && has_timestamp) {
     String output = print_datetime();
     datetime_label->set_markup(output);
   }
@@ -44,15 +44,22 @@ String DateTime::print_datetime() {
 void DateTime::set_timestamp(std::int32_t timestamp) {
   if (datetime_label) {
     this->timestamp = timestamp;
+    this->has_timestamp = true;
     String output = print_datetime();
     datetime_label->set_markup(output);
   }
 }
-void DateTime::set_format(String format) { this->format = format; }
+void DateTime::set_format(String format) {
+  this->format = format;
+  if (datetime_label && has_timestamp) {
+    String output = print_datetime();
+    datetime_label->set_markup(output);
+  }
+}
 void DateTime::set_date_text(String text) {
   if (datetime_label) {
-    String markup = "<span alpha='50%%'>Yesterday</span>";
-    markup = GLib::strdup_printf(markup.c_str(), text.c_str());
+    String markup = GLib::strdup_printf(
+        "<span alpha='50%%'>%s</span>", text.c_str());
     datetime_label->set_markup(markup);
   }
 }

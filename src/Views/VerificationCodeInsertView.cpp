@@ -18,6 +18,7 @@
 #include <peel/FloatPtr.h>
 #include <peel/GLib/Variant.h>
 #include <peel/Gdk/Clipboard.h>
+#include <peel/GLib/functions.h>
 #include <peel/RefPtr.h>
 #include <peel/UniquePtr.h>
 #include <peel/class.h>
@@ -36,8 +37,9 @@ void VerificationCodeInsertView::vfunc_dispose() {
     status_page->unparent();
     status_page = nullptr;
   }
-  if (timeout_id) {
-    // TODO: stop the countdown timer.
+  if (timeout_id != 0) {
+    g_source_remove(static_cast<guint>(timeout_id));
+    timeout_id = 0;
   }
   parent_vfunc_dispose<VerificationCodeInsertView>();
 }
@@ -67,28 +69,27 @@ void VerificationCodeInsertView::set_view_stack(Adw::ViewStack *view_stack) {
   this->view_stack = view_stack;
 }
 FloatPtr<Gtk::Button> VerificationCodeInsertView::resend_countdown_box() {
-  // TODO: set the timing from response of tdlib.
   send_again = Gtk::Button::create();
-  // FIX: countdown is not set correctly.
-  RefPtr<GLib::DateTime> dt =
-      GLib::DateTime::create_from_unix_utc(countdown / 1000);
-  send_again->set_label(dt->format("%M:%S"));
+  auto format_countdown = [](std::uint32_t seconds) {
+    return GLib::strdup_printf("%02u:%02u", seconds / 60, seconds % 60);
+  };
+  send_again->set_label(format_countdown(countdown).c_str());
   send_again->set_sensitive(false);
   send_again->add_css_class("flat");
   send_again->connect_signal("clicked", [](Gtk::Button *) {
     // TODO: request to resend the code.
   });
-  timeout_id = GLib::timeout_add_seconds(1, [this]() {
-    if (countdown <= 0) {
+  timeout_id = GLib::timeout_add_seconds(1, [this]() -> gboolean {
+    if (countdown <= 1) {
+      countdown = 0;
+      timeout_id = 0;
       send_again->set_label("Resend Code");
       send_again->set_sensitive(true);
-      return false;
+      return FALSE;
     }
-    countdown -= 1000;
-    RefPtr<GLib::DateTime> dt =
-        GLib::DateTime::create_from_unix_utc(countdown / 1000);
-    send_again->set_label(dt->format("%M:%S"));
-    return true;
+    countdown -= 1;
+    send_again->set_label(format_countdown(countdown).c_str());
+    return TRUE;
   });
 
   return send_again;

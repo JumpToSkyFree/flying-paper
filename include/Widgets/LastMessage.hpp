@@ -26,7 +26,7 @@ class LastMessage final : public Gtk::Widget {
   Gtk::Box *container;
   RefPtr<Gtk::Label> text_content;
   RefPtr<Gtk::Image> image_content;
-  bool read;
+  bool read{true};
 
   void set_label_with_markup(bool read, const std::string &text);
 

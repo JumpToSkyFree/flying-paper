@@ -36,8 +36,8 @@ class Avatar final : public Gtk::Widget {
     f.prop(prop_text(), "").get(&Avatar::get_text).set(&Avatar::set_text);
   }
 
-  gboolean clickable;
-  guint avatar_size;
+  gboolean clickable{0};
+  guint avatar_size{32};
   peel::String text;
 
   PEEL_PROPERTY(gboolean, clickable, "clickable");

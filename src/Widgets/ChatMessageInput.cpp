@@ -45,6 +45,8 @@ inline void MessageInput::init(Class *) {
 
   send_button->connect_signal("clicked", [this](Gtk::Button *) {
     String message = this->entry->get_text();
+    if (!message || !*message)
+      return;
     td::td_api::object_ptr<td::td_api::inputMessageText> message_content =
         td::td_api::make_object<td::td_api::inputMessageText>();
     message_content->text_ =

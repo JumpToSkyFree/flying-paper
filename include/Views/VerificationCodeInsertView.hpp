@@ -26,24 +26,24 @@ class VerificationCodeInsertView final : public Gtk::Widget {
   void setup_entry(Gtk::Entry *);
 
   template <typename F> static void define_properties(F &f) {
-    f.prop(prop_n_entries(), 0, 0, 0)
+    f.prop(prop_n_entries(), 0, 100, 0)
         .get(&VerificationCodeInsertView::get_n_entries)
         .set(&VerificationCodeInsertView::set_n_entries);
   }
 
   RefPtr<Gtk::Box> inputs_box;
-  Adw::StatusPage *status_page;
-  std::vector<Gtk::Entry *> entries;
-  Gdk::Clipboard *clipboard;
-  std::uint32_t n_entries;
+  Adw::StatusPage *status_page{nullptr};
+  std::vector<RefPtr<Gtk::Entry>> entries;
+  Gdk::Clipboard *clipboard{nullptr};
+  std::uint32_t n_entries{0};
   RefPtr<Gtk::ShortcutController> controller;
   RefPtr<Gtk::Shortcut> shortcut;
-  std::uint32_t countdown{300000};
+  std::uint32_t countdown{300};
   std::uint64_t timeout_id{0};
 
   RefPtr<Gtk::Button> send_again;
 
-  Adw::ViewStack *view_stack;
+  Adw::ViewStack *view_stack{nullptr};
 
   RefPtr<Gtk::Button> verify_button;
 

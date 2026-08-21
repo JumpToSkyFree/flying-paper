@@ -17,6 +17,8 @@ void ScrolledContainer::Class::init() {
   override_vfunc_dispose<ScrolledContainer>();
 }
 inline void ScrolledContainer::vfunc_dispose() {
+  start_connection.disconnect();
+  end_connection.disconnect();
   if (scrolled_window) {
     scrolled_window->unparent();
     scrolled_window = nullptr;
@@ -42,24 +44,32 @@ void ScrolledContainer::set_threhshold(double threshold) {
 double ScrolledContainer::get_threhshold() const { return threshold; }
 void ScrolledContainer::on_threshold_reached_start(std::function<void()> &&cb) {
   auto adj = scrolled_window->get_vadjustment();
-  this->_on_treshold_reached = std::move(cb);
-  adj->connect_signal("value_changed", [adj, this](peel::Gtk::Adjustment *) {
-    double current = adj->get_value();
-    if (current <= threshold) {
-      _on_treshold_reached();
-    }
-  });
+  this->on_threshold_start = std::move(cb);
+  start_connection = adj->connect_signal(
+      "value_changed",
+      [self = peel::WeakPtr<ScrolledContainer>(this),
+       adj](peel::Gtk::Adjustment *) {
+        if (!self)
+          return;
+        double current = adj->get_value();
+        if (current <= self->threshold)
+          self->on_threshold_start();
+      });
 }
 void ScrolledContainer::on_threshold_reached_end(std::function<void()> &&cb) {
   auto adj = scrolled_window->get_vadjustment();
-  this->_on_treshold_reached = std::move(cb);
-  adj->connect_signal("value_changed", [adj, this](peel::Gtk::Adjustment *) {
-    double current = adj->get_value();
-    double target = adj->get_upper() - adj->get_page_size();
+  this->on_threshold_end = std::move(cb);
+  end_connection = adj->connect_signal(
+      "value_changed",
+      [self = peel::WeakPtr<ScrolledContainer>(this),
+       adj](peel::Gtk::Adjustment *) {
+        if (!self)
+          return;
+        double current = adj->get_value();
+        double target = adj->get_upper() - adj->get_page_size();
 
-    if (current >= (target - threshold)) {
-      _on_treshold_reached();
-    }
-  });
+        if (current >= (target - self->threshold))
+          self->on_threshold_end();
+      });
 }
 } // namespace FlyingPaper::Widgets

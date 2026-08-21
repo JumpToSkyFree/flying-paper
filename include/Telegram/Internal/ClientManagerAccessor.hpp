@@ -22,7 +22,7 @@ public:
     auto session = Session::Session::get();
     auto client = session->get_client();
     if (!client)
-      return -1;
+      return 0;
     return client->impl->subscribe(object_id, std::move(callback));
   }
   static void unsubscribe(std::int32_t object_id,

@@ -4,6 +4,7 @@
 #include "peel/Adw/Toast.h"
 #include "peel/Adw/ToastOverlay.h"
 #include "peel/GLib/DateTime.h"
+#include "peel/GLib/functions.h"
 #include "peel/Gtk/BinLayout.h"
 #include "peel/Gtk/Box.h"
 #include "peel/Gtk/Button.h"
@@ -20,6 +21,7 @@
 #include <peel/GObject/Object.h>
 #include <peel/GObject/Type.h>
 #include <peel/RefPtr.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <peel/signal.h>
 #include <td/telegram/td_api.h>
@@ -44,7 +46,9 @@ inline void ChatListItem::vfunc_dispose() {
 }
 void ChatListItem::set_chat_title(peel::String chat_title) {
   if (chat_title_label) {
-    std::string _format = std::string("<b>") + chat_title.c_str() + "</b>";
+    String _format = GLib::strdup_printf(
+        "<b>%s</b>",
+        GLib::markup_escape_text(chat_title.c_str(), -1).c_str());
     chat_title_label->set_markup(_format.c_str());
   }
   this->chat_title = chat_title;
@@ -86,7 +90,6 @@ inline void ChatListItem::init(Class *) {
   container->append(avatar);
 
   datetime = Widgets::DateTime::create("%H:%M");
-  datetime->set_timestamp(100000);
 
   chat_title_and_last_message_time_container =
       make_horizontal_container(chat_title_label, datetime);
@@ -141,28 +144,33 @@ void ChatListItem::set_avatar_picture(
     const td::td_api::object_ptr<td::td_api::file> &photo) {
   auto session = Session::Session::get();
   auto client = session->get_client();
+  peel::WeakPtr<ChatListItem> self_weak(this);
   client->download_file(
       photo, 1,
-      [this](const td::td_api::file &file) {
+      [self_weak](const td::td_api::file &file) {
+        if (!self_weak)
+          return;
+        ChatListItem *self = self_weak;
         RefPtr<Gio::File> image_file =
             Gio::File::create_for_path(file.local_->path_.c_str());
         RefPtr<Gtk::Picture> picture =
             Gtk::Picture::create_for_file(image_file);
-        avatar->set_picture(picture);
+        self->avatar->set_picture(picture);
       },
       nullptr);
 }
 void ChatListItem::set_timestamp(std::int32_t timestamp) {
   if (datetime) {
     auto now = GLib::DateTime::create_now_local();
-    auto ts = GLib::DateTime::create_from_unix_local(timestamp);
-    auto span = now->difference(ts);
-    if ((span / G_TIME_SPAN_DAY) / 7) {
+    RefPtr<GLib::DateTime> ts =
+        GLib::DateTime::create_from_unix_local(timestamp);
+    gint64 span = now->difference(ts);
+    if ((span / G_TIME_SPAN_DAY) >= 7) {
       datetime->set_format("%d/%m/%Y");
-    } else if ((span / G_TIME_SPAN_HOUR) > 24) {
+    } else if (span >= 24 * G_TIME_SPAN_HOUR) {
       datetime->set_format("%a %H:%M");
-    } else if ((span / G_TIME_SPAN_HOUR) < 24) {
-      datetime->set_format("%a %H:%M");
+    } else {
+      datetime->set_format("%H:%M");
     }
 
     datetime->set_timestamp(timestamp);

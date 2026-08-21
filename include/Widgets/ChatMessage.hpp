@@ -7,6 +7,7 @@
 #include "peel/Gtk/Viewport.h"
 #include "peel/Gtk/Widget.h"
 #include <cstdint>
+#include <memory>
 #include <peel/FloatPtr.h>
 #include <peel/Gtk/Gtk.h>
 #include <peel/RefPtr.h>
@@ -24,20 +25,18 @@ class ChatMessage : public peel::Gtk::Widget {
   peel::RefPtr<peel::Gtk::Box> bubble_container;
   peel::RefPtr<peel::Gtk::Box> message_container;
 
-  td::td_api::message *message;
-  td::td_api::MessageContent *message_content;
+  std::shared_ptr<td::td_api::message> message;
 
   bool is_group{false};
 
   peel::FloatPtr<peel::Gtk::TextView> create_label();
   peel::RefPtr<peel::Gtk::Box> create_message_container();
 
-  std::int64_t message_id;
+  std::int64_t message_id{0};
 
 public:
   static peel::FloatPtr<ChatMessage> create();
-  void set_message_content(td::td_api::message *message,
-                           td::td_api::MessageContent *message_content);
+  void set_message_content(std::shared_ptr<td::td_api::message> message);
   void set_is_group(bool);
   std::int64_t get_id();
   td::td_api::message *get_message_obj();

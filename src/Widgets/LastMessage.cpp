@@ -15,6 +15,7 @@
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/RefPtr.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <td/telegram/td_api.h>
 #include <td/tl/TlObject.h>
@@ -53,13 +54,14 @@ RefPtr<LastMessage> LastMessage::create() {
   return ::Object::create<LastMessage>();
 }
 void LastMessage::set_label_with_markup(bool read, const std::string &text) {
+  std::string escaped(GLib::markup_escape_text(text.c_str(), -1).c_str());
   if (read) {
     String markup = "<span alpha='50%%'>%s</span>";
-    markup = GLib::strdup_printf(markup, text.c_str());
+    markup = GLib::strdup_printf(markup, escaped.c_str());
     text_content->set_markup(markup.c_str());
   } else {
     String markup = "<b>%s</b>";
-    markup = GLib::strdup_printf(markup, text.c_str());
+    markup = GLib::strdup_printf(markup, escaped.c_str());
     text_content->set_markup(markup.c_str());
   }
   this->read = read;
@@ -99,13 +101,17 @@ void LastMessage::set_message_content(
 
             // FIX: Gtk doesn't load webp formats by default.
 
+            peel::WeakPtr<LastMessage> owner(this);
             client->download_file(
                 sticker->sticker_->sticker_, 1,
-                [this](const td::td_api::file &file) {
+                [owner](const td::td_api::file &file) {
+                  if (!owner)
+                    return;
                   RefPtr<Gtk::Picture> picture =
                       Gtk::Picture::create_for_filename(
                           file.local_->path_.c_str());
-                  image_content->set_from_paintable(picture->get_paintable());
+                  owner->image_content->set_from_paintable(
+                      picture->get_paintable());
                 },
                 nullptr);
             is_message_content_set = true;
@@ -122,21 +128,24 @@ void LastMessage::set_message_content(
             if (photo->caption_->text_.length()) {
               set_label_with_markup(read, photo->caption_->text_);
             } else {
-              std::string photo = "Photo";
-              set_label_with_markup(read, photo);
+              std::string photo_label = "Photo";
+              set_label_with_markup(read, photo_label);
             }
             if (photo->photo_) {
               image_content->set_visible(true);
               auto session = Session::Session::get();
               auto client = session->get_client();
               if (photo->photo_->sizes_.size() && photo->photo_->sizes_[0]) {
+                peel::WeakPtr<LastMessage> owner(this);
                 client->download_file(
                     photo->photo_->sizes_[0]->photo_, 1,
-                    [this](const td::td_api::file &file) {
+                    [owner](const td::td_api::file &file) {
+                      if (!owner)
+                        return;
                       RefPtr<Gtk::Picture> picture =
                           Gtk::Picture::create_for_filename(
                               file.local_->path_.c_str());
-                      image_content->set_from_paintable(
+                      owner->image_content->set_from_paintable(
                           picture->get_paintable());
                     },
                     nullptr);
@@ -156,8 +165,8 @@ void LastMessage::set_message_content(
             if (video->caption_->text_.length()) {
               set_label_with_markup(read, video->caption_->text_);
             } else {
-              std::string photo = "Photo";
-              set_label_with_markup(read, photo);
+              std::string video_label = "Video";
+              set_label_with_markup(read, video_label);
             }
             if (video->video_) {
               image_content->set_visible(true);
@@ -165,13 +174,16 @@ void LastMessage::set_message_content(
               auto client = session->get_client();
               if (video->video_->thumbnail_ &&
                   video->video_->thumbnail_->file_) {
+                peel::WeakPtr<LastMessage> owner(this);
                 client->download_file(
                     video->video_->thumbnail_->file_, 1,
-                    [this](const td::td_api::file &file) {
+                    [owner](const td::td_api::file &file) {
+                      if (!owner)
+                        return;
                       RefPtr<Gtk::Picture> picture =
                           Gtk::Picture::create_for_filename(
                               file.local_->path_.c_str());
-                      image_content->set_from_paintable(
+                      owner->image_content->set_from_paintable(
                           picture->get_paintable());
                     },
                     nullptr);
@@ -191,8 +203,8 @@ void LastMessage::set_message_content(
             if (gif->caption_->text_.length()) {
               set_label_with_markup(read, gif->caption_->text_);
             } else {
-              std::string photo = "GIF";
-              set_label_with_markup(read, photo);
+              std::string gif_label = "GIF";
+              set_label_with_markup(read, gif_label);
             }
             if (gif->animation_) {
               image_content->set_visible(true);
@@ -200,13 +212,16 @@ void LastMessage::set_message_content(
               auto client = session->get_client();
               if (gif->animation_->thumbnail_ &&
                   gif->animation_->thumbnail_->file_) {
+                peel::WeakPtr<LastMessage> owner(this);
                 client->download_file(
                     gif->animation_->thumbnail_->file_, 1,
-                    [this](const td::td_api::file &file) {
+                    [owner](const td::td_api::file &file) {
+                      if (!owner)
+                        return;
                       RefPtr<Gtk::Picture> picture =
                           Gtk::Picture::create_for_filename(
                               file.local_->path_.c_str());
-                      image_content->set_from_paintable(
+                      owner->image_content->set_from_paintable(
                           picture->get_paintable());
                     },
                     nullptr);

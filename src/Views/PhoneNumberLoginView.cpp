@@ -114,7 +114,6 @@ void PhoneNumberLoginView::handle_send_code(VerificationCodeInsertView *) {
 inline void PhoneNumberLoginView::init(Class *) {
   FloatPtr<Adw::ViewStack> _view_stack = Adw::ViewStack::create();
   view_stack = _view_stack;
-  view_stack->set_transition_duration(true);
   view_stack->set_transition_duration(500);
   set_halign(Gtk::Align::CENTER);
   set_valign(Gtk::Align::CENTER);

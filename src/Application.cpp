@@ -41,15 +41,26 @@ inline void Application::vfunc_startup() {
       "/org/jumptoskyfree/flyingpaper/styles/style.css");
 
   auto display = Gdk::Display::get_default();
-  Gtk::StyleContext::add_provider_for_display(display, css_provider,
-                                              GTK_STYLE_PROVIDER_PRIORITY_USER);
+  Gtk::StyleContext::add_provider_for_display(
+      display, css_provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 inline void Application::vfunc_dispose() {
   parent_vfunc_dispose<Application>();
-  client_manager->stop_loop();
+  if (auth_subscription_id != 0) {
+    Telegram::ClientManagerAccessor::unsubscribe(
+        td::td_api::updateAuthorizationState::ID, auth_subscription_id);
+    auth_subscription_id = 0;
+  }
+  if (client_manager)
+    client_manager->stop_loop();
 }
 void Application::vfunc_activate() {
   parent_vfunc_activate<Application>();
+
+  if (window) {
+    window->present();
+    return;
+  }
 
   auto session = Session::Session::get();
   Telegram::ClientManager::ClientManagerAuthorizationParams params = {
@@ -60,11 +71,11 @@ void Application::vfunc_activate() {
 
   session->set_client(Telegram::ClientManager::create(params));
   client_manager = session->get_client();
-  auto *window = ApplicationWindow::ApplicationWindow::create(this);
+  window = ApplicationWindow::ApplicationWindow::create(this);
   client_manager->authorize();
-  Telegram::ClientManagerAccessor::subscribe(
+  auth_subscription_id = Telegram::ClientManagerAccessor::subscribe(
       td::td_api::updateAuthorizationState::ID,
-      [window](const Telegram::ClientManager::SharedObject &) {
+      [this](const Telegram::ClientManager::SharedObject &) {
         window->setup();
         window->present();
       });
@@ -77,7 +88,8 @@ inline void Application::init(Class *) {
   set_accels_for_action("app.quit", (const char *[]){"<Ctrl>Q", nullptr});
 }
 void Application::action_quit(Gio::SimpleAction *, GLib::Variant *) {
-  client_manager->stop_loop();
+  if (client_manager)
+    client_manager->stop_loop();
   quit();
 }
 void Application::action_about(Gio::SimpleAction *, GLib::Variant *) {

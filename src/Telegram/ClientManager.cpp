@@ -45,7 +45,8 @@ void ClientManager::download_file(
   if (file->local_ && file->local_->is_downloading_completed_) {
     on_success(*file);
     return;
-  } else if (file->remote_ && file->remote_->id_ != "0") {
+  }
+  if (file->remote_ && file->remote_->id_ != "0") {
     ClientManagerAccessor::send(
         td::td_api::make_object<td::td_api::downloadFile>(file->id_, priority,
                                                           0, 0, false),
@@ -81,13 +82,17 @@ void ClientManager::download_file(
                 if (on_error) {
                   on_error(*error);
                 }
-                if (*sub_id != 0) {
-                  ClientManagerAccessor::unsubscribe(td::td_api::updateFile::ID,
-                                                     *sub_id);
-                  *sub_id = 0;
-                }
-              });
+                 if (*sub_id != 0) {
+                   ClientManagerAccessor::unsubscribe(td::td_api::updateFile::ID,
+                                                      *sub_id);
+                   *sub_id = 0;
+                 }
+               });
         });
+  } else if (on_error) {
+    auto failure = td::td_api::make_object<td::td_api::error>(
+        400, "FILE_HAS_NO_REMOTE_REFERENCE");
+    on_error(*failure);
   }
 }
 } // namespace Telegram

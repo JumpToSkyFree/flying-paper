@@ -22,6 +22,7 @@
 #include <peel/FloatPtr.h>
 #include <peel/GObject/Object.h>
 #include <peel/Pango/WrapMode.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <td/telegram/Client.h>
 #include <td/telegram/td_api.h>
@@ -51,13 +52,14 @@ FloatPtr<ChatMessage> ChatMessage::create() {
 }
 void ChatMessage::set_is_group(bool is_group) { this->is_group = is_group; }
 void ChatMessage::set_message_content(
-    td::td_api::message *message, td::td_api::MessageContent *message_content) {
-  if (!message_content)
+    std::shared_ptr<td::td_api::message> owned_message) {
+  if (!owned_message || !owned_message->content_)
     return;
 
+  this->message = std::move(owned_message);
+  td::td_api::message *message = this->message.get();
+  td::td_api::MessageContent *message_content = message->content_.get();
   this->message_id = message->id_;
-  this->message = message;
-  this->message_content = message_content;
   this->message_container = create_message_container();
   this->message_container->set_margin_start(8);
   this->message_container->set_margin_end(8);
@@ -74,15 +76,20 @@ void ChatMessage::set_message_content(
     bubble_container->set_halign(Gtk::Align::START);
   }
 
-  if (message->sender_id_->get_id() == td::td_api::messageSenderUser::ID) {
+  if (message->sender_id_ &&
+      message->sender_id_->get_id() == td::td_api::messageSenderUser::ID) {
     auto sender =
         static_cast<td::td_api::messageSenderUser *>(&*message->sender_id_);
+    peel::WeakPtr<ChatMessage> self_weak(this);
     Telegram::ClientManagerAccessor::send(
         td::td_api::make_object<td::td_api::getUser>(sender->user_id_),
-        [this](const Telegram::ClientManager::SharedObject &obj) {
+        [self_weak](const Telegram::ClientManager::SharedObject &obj) {
+          if (!self_weak || obj->get_id() != td::td_api::user::ID)
+            return;
+          ChatMessage *self = self_weak;
           Telegram::ClientManagerAccessor::handle<td::td_api::user>(
               obj,
-              [this](const std::shared_ptr<td::td_api::user> &user) {
+              [self](const std::shared_ptr<td::td_api::user> &user) {
                 auto session = Session::Session::get();
                 auto client = session->get_client();
                 std::string username;
@@ -91,7 +98,7 @@ void ChatMessage::set_message_content(
                     username = user->usernames_->active_usernames_.back();
                   }
                 }
-                if (is_group) {
+                if (self->is_group) {
                   // TODO: Make a seperate container for message text and user
                   // username. String user_name_markup = GLib::strdup_printf(
                   //     "<b>%s</b> (<span alpha='50%%'>%s</span>)",
@@ -103,15 +110,19 @@ void ChatMessage::set_message_content(
                   // bubble_container->prepend(std::move(username_label));
                 }
                 if (user->profile_photo_ && user->profile_photo_->small_) {
+                  peel::WeakPtr<ChatMessage> owner(self);
                   client->download_file(
                       user->profile_photo_->small_, 1,
-                      [this](const td::td_api::file &file) {
+                      [owner](const td::td_api::file &file) {
+                        if (!owner)
+                          return;
+                        ChatMessage *self = owner;
                         auto pic_file = Gtk::Picture::create_for_filename(
                             file.local_->path_.c_str());
-                        if (is_group) {
+                        if (self->is_group) {
                           auto avatar = Widgets::Avatar::create_from_picture(
                               false, "", pic_file, 16);
-                          message_container->prepend(avatar);
+                          self->message_container->prepend(avatar);
                         }
                       },
                       {/* TODO: Show failure message. */});
@@ -136,8 +147,6 @@ void ChatMessage::set_message_content(
     break;
   }
   case td::td_api::messagePhoto::ID: {
-    auto message_photo =
-        static_cast<td::td_api::messagePhoto *>(message_content);
     break;
   }
   default: {
@@ -170,5 +179,5 @@ FloatPtr<Gtk::TextView> ChatMessage::create_label() {
   return text_view;
 }
 std::int64_t ChatMessage::get_id() { return this->message_id; }
-td::td_api::message *ChatMessage::get_message_obj() { return message; }
+td::td_api::message *ChatMessage::get_message_obj() { return message.get(); }
 } // namespace FlyingPaper::Widgets

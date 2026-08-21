@@ -21,6 +21,8 @@ class Application final : public Adw::Application {
   void action_quit(Gio::SimpleAction *, GLib::Variant *);
   void action_about(Gio::SimpleAction *, GLib::Variant *);
   std::shared_ptr<Telegram::ClientManager> client_manager;
+  FlyingPaper::ApplicationWindow::ApplicationWindow *window{nullptr};
+  std::uint64_t auth_subscription_id{0};
 
 public:
   static RefPtr<Application> create();

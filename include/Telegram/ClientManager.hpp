@@ -72,7 +72,7 @@ public:
   }
 
   template <typename U, typename T> static T *cast_ptr(U *obj) {
-    return std::static_pointer_cast<T>(obj);
+    return static_cast<T *>(obj);
   }
 
   void download_file(const td::td_api::object_ptr<td::td_api::file> &file,

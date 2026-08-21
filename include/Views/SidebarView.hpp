@@ -15,6 +15,7 @@
 #include <peel/FloatPtr.h>
 #include <peel/Gtk/Box.h>
 #include <peel/RefPtr.h>
+#include <peel/WeakPtr.h>
 #include <peel/class.h>
 #include <peel/signal.h>
 #include <td/telegram/td_api.h>
@@ -34,17 +35,17 @@ private:
   inline void init(Class *);
   inline void vfunc_dispose();
 
-  Gtk::Box *container;
+  Gtk::Box *container{nullptr};
   RefPtr<Adw::ToastOverlay> toast_overlay;
   RefPtr<Gtk::GestureClick> avatar_click_controller;
   RefPtr<Widgets::Avatar> avatar;
-  std::uint64_t file_update_subscription_id;
+  std::uint64_t file_update_subscription_id{0};
   Callback cb;
 
   FloatPtr<Adw::HeaderBar> make_header_bar();
   FloatPtr<Gtk::MenuButton> make_menu();
   void make_profile_avatar();
-  td::td_api::object_ptr<td::td_api::ChatList> chat_list;
+  td::td_api::object_ptr<td::td_api::ChatList> chat_list{nullptr};
 
   std::unordered_map<std::int64_t, RefPtr<Widgets::ChatListItem>> chats_map;
   void set_avatar_fullname(const td::td_api::user &);
@@ -57,6 +58,7 @@ private:
   std::uint64_t update_new_chat_subscription{0};
   std::uint64_t update_chat_position{0};
   std::uint64_t update_new_chat{0};
+  std::uint64_t update_chat_last_message{0};
   std::uint64_t update_chat_read_inbox{0};
 
   void order_chat_item_position(Widgets::ChatListItem *item);
